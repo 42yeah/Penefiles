@@ -49,6 +49,41 @@ class AuthenticationDto : public oatpp::DTO
     DTO_FIELD(String, session);
 };
 
+class FileDto : public oatpp::DTO
+{
+    DTO_INIT(FileDto, DTO);
+
+    DTO_FIELD(Int32, id);
+    DTO_FIELD(String, filename);
+    DTO_FIELD(String, realfile);
+    DTO_FIELD(String, created_at);
+    DTO_FIELD(String, modified_at);
+};
+
+class FileTagDto : public oatpp::DTO
+{
+    DTO_INIT(FileTagDto, DTO)
+
+    DTO_FIELD(Int32, fileid);
+    DTO_FIELD(String, tag);
+};
+
+class TagDto : public oatpp::DTO
+{
+    DTO_INIT(TagDto, DTO)
+
+    DTO_FIELD(String, tag);
+};
+
+template<typename T>
+class DataDto : public oatpp::DTO
+{
+    DTO_INIT(DataDto, DTO)
+
+    DTO_FIELD(Int32, count);
+    DTO_FIELD(Vector<T>, items);
+};
+
 #include OATPP_CODEGEN_END(DTO)
 
 #endif // PENEFILES_DTO_HPP

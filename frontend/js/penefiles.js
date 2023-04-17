@@ -15,6 +15,7 @@ export class Penefiles {
         this.loginTopControlEl = document.querySelector("#login-top-control");
         this.registerTopControlEl = document.querySelector("#register-top-control");
         this.infoTopControlEl = document.querySelector("#info-top-control");
+        this.lastSelectedEntry = null;
         this.API = "http://127.0.0.1:4243";
 
         // Variables
@@ -24,6 +25,11 @@ export class Penefiles {
         this.infoPaneElContent = "";
         this.superPositionWindowContent = "";
         this.superPositionWindowShown = false;
+        this.files = [];
+        this.tags = [];
+        this.filesTags = [];
+        this.filesTagsDict = {};
+        this.users = [];
         
         this.loadVariables();
         this.updateTopOperations();
@@ -36,7 +42,12 @@ export class Penefiles {
             fileListElContent: this.fileListElContent,
             infoPaneElContent: this.infoPaneElContent,
             superPositionWindowContent: this.superPositionWindowContent,
-            superPositionWindowShown: this.superPositionWindowShown
+            superPositionWindowShown: this.superPositionWindowShown,
+            files: this.files,
+            tags: this.tags,
+            filesTags: this.filesTags,
+            filesTagsDict: this.filesTagsDict,
+            users: this.users
         }));
     }
 
@@ -48,6 +59,11 @@ export class Penefiles {
         cached = JSON.parse(cached);
         this.session = cached["session"];
         this.username = cached["username"];
+        this.files = cached["files"];
+        this.tags = cached["tags"];
+        this.filesTags = cached["filesTags"];
+        this.filesTagsDict = cached["filesTagsDict"];
+        this.users = cached["users"];
         // TODO: update file list content.
     }
 
@@ -149,6 +165,96 @@ export class Penefiles {
             }
         }).catch(e => {
             this.message("错误：无法注册", e.toString());
+        });
+    }
+
+    // TODO: private data.
+    fetchAll() {
+
+        return new Promise((resolve, reject) => {
+            let allFour = 0;
+
+            fetch(`${this.API}/files`, {
+                method: "GET"
+            }).then(res => {
+                return res.json();
+            }).then(json => {
+                this.files = json["items"];
+                allFour++;
+                if (allFour == 4)
+                {
+                    this.dumpVariables();
+                    resolve();
+                }
+            }).catch(e => {
+                this.message("错误：无法拉取文件列表。", e.toString());
+                reject(e);
+            });
+            fetch(`${this.API}/tags`, {
+                method: "GET"
+            }).then(res => {
+                return res.json();
+            }).then(json => {
+                this.tags = json["items"];
+                allFour++;
+                if (allFour == 4)
+                {
+                    this.dumpVariables();
+                    resolve();
+                }
+            }).catch(e => {
+                this.message("错误：无法拉取标签列表。", e.toString());
+                reject(e);
+            });
+            fetch(`${this.API}/users`, {
+                method: "GET"
+            }).then(res => {
+                return res.json();
+            }).then(json => {
+                this.users = json["items"];
+                allFour++;
+                if (allFour == 4)
+                {
+                    this.dumpVariables();
+                    resolve();
+                }
+            }).catch(e => {
+                this.message("错误：无法拉取标签列表。", e.toString());
+                reject(e);
+            });
+            fetch(`${this.API}/files-tags`, {
+                method: "GET"
+            }).then(res => {
+                return res.json();
+            }).then(json => {
+                this.filesTags = json["items"];
+                this.filesTagsDict = {};
+                for (let i = 0; i < this.filesTags.length; i++) {
+                    let d = this.filesTagsDict[this.filesTags[i].fileid];
+                    if (!d) {
+                        this.filesTagsDict[this.filesTags[i].fileid] = [ this.filesTags[i].tag ];
+                    } else {
+                        d.push(this.filesTags[i].tag);
+                    }
+                }
+                allFour++;
+                if (allFour == 4)
+                {
+                    this.dumpVariables();
+                    resolve();
+                }
+            }).catch(e => {
+                this.message("错误：无法拉取文件标签列表。", e.toString());
+                reject(e);
+            });
+        });
+        
+    }
+
+    doRefresh() {
+        getFileList();
+        this.fetchAll().then(() => {
+            this.setFileListContent(getFileList());
         });
     }
 
@@ -299,6 +405,20 @@ export class Penefiles {
         this.superPositionWindowShown = false;
         this.dumpVariables();
     }
+
+    fileInfo(id) {
+        for (let i = 0; i < this.files.length; i++) {
+            if (this.files[i].id == id) {
+                this.setInfoPaneContent(getFileInfo(this.files[i]));
+                break;
+            }
+        }
+        if (this.lastSelectedEntry) {
+            this.lastSelectedEntry.classList.remove("selected");
+        }
+        this.lastSelectedEntry = document.querySelector("#file-entry-" + id);
+        this.lastSelectedEntry.classList.add("selected");
+    }
 }
 
 const loginPage = `
@@ -447,6 +567,108 @@ function getUserInfo() {
                     <div>保存修改</div>
                 </div>
             </div>
+        </div>
+    </div>
+    `;
+}
+
+function getFileList() {
+    let ret = ``;
+    for (let i = 0; i < session.files.length; i++) {
+    
+        const f = session.files[i];
+        let userTag = null;
+        let otherTags = "";
+        for (let i = 0; i < session.filesTagsDict[f.id].length; i++) {
+            const tag = session.filesTagsDict[f.id][i];
+            console.log(tag);
+            if (userTag == null) {
+                for (let j = 0; j < session.users.length; j++) {
+                    if (session.users[j].username == tag) {
+                        userTag = tag;
+                        break;
+                    }
+                }
+            }
+            if (tag != userTag) {
+                otherTags += `<div class="tag">${tag}</div>`;
+            }
+            
+        }
+        ret += `
+        <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id})" class="file-entry controls">
+            <div class="file-info">
+                <div class="file-name">
+                    ${f.filename}
+                </div>
+                <div class="tags">
+                    <div class="invisible tag">
+                        20M
+                    </div>
+                    <div class="invisible tag">
+                        ${f.created_at.split(" ")[0]}
+                    </div>
+                    <div class="user tag">
+                        ${userTag}
+                    </div>
+                    <!-- <div class="file-type tag">文档</div> -->
+                    ${otherTags}
+                </div>
+            </div>
+        </div>
+        `;
+    }
+    return ret;
+}
+
+function getFileInfo(f) {
+    console.log(f);
+    let tags = "";
+    for (let i = 0; i < session.filesTagsDict[f.id].length; i++) {
+        tags += session.filesTagsDict[f.id][i] + " ";
+    }
+    return `
+    <h2 class="file-name-title">${f.filename}</h2>
+    <div class="info-pane-operations-container">
+        <div class="file-operations">
+            <div class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/bin.svg">
+                <div>删除文件</div>
+            </div>
+            <div class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/disk.svg">
+                <div>下载文件</div>
+            </div>
+            <div class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/brick_go.svg">
+                <div>保存修改</div>
+            </div>
+        </div>
+    </div>
+    <div class="info-pane-operations">
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">标签</div>
+            <div class="info-pane-input">
+                <input class="controls info-pane-tags-input" value="${tags}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">私有</div>
+            <div class="info-pane-checkbox">
+                <input class="controls" type="checkbox">
+            </div>
+        </div>
+    </div>
+    <div class="info-pane-table-container">
+        <div class="info-pane-table">
+            <div class="info-pane-label">大小</div>
+            <div>22M (23068672b)</div>
+            <div class="info-pane-label">创建日期</div>
+            <div>${f.created_at}</div>
+            <div class="info-pane-label">最后修改于</div>
+            <div>${f.modified_at}</div>
+            <div class="info-pane-label">上传于</div>
+            <div>${f.created_at}</div>
         </div>
     </div>
     `;

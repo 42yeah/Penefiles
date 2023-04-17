@@ -10,6 +10,7 @@
 #include <oatpp/web/mime/multipart/InMemoryDataProvider.hpp>
 #include <oatpp/web/mime/multipart/Reader.hpp>
 #include <oatpp/web/mime/multipart/PartList.hpp>
+#include <filesystem>
 #include "services/PenefilesService.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController)
@@ -37,6 +38,11 @@ public:
         dto->status = 200;
         dto->message = "Hello World!";
         return createDtoResponse(Status::CODE_200, dto);
+    }
+
+    ENDPOINT("GET", "/users", list_users)
+    {
+        return createDtoResponse(Status::CODE_200, penefiles_service.list_users());
     }
 
     ENDPOINT("POST", "/users/register", register_user,
@@ -78,16 +84,51 @@ public:
         return createDtoResponse(Status::CODE_200, res);
     }
 
+    ENDPOINT("GET", "/files", files)
+    {
+        return createDtoResponse(Status::CODE_200, penefiles_service.list_files());
+    }
+
+    ENDPOINT("GET", "/tags", tags)
+    {
+        return createDtoResponse(Status::CODE_200, penefiles_service.list_tags());
+    }
+
+    ENDPOINT("GET", "/files-tags", files_tags)
+    {
+        return createDtoResponse(Status::CODE_200, penefiles_service.list_files_tags());
+    }
+
     ENDPOINT("POST", "/files/upload", files_upload,
         REQUEST(std::shared_ptr<IncomingRequest>, request))
     {
+        namespace fs = std::filesystem;
         namespace multipart = oatpp::web::mime::multipart;
+
+        std::filesystem::path uploads("uploads");
+        auto stat = fs::status(uploads);
+        if (fs::status_known(stat) && stat.type() == fs::file_type::not_found)
+        {
+            OATPP_LOGI("PENEfiles", "Creating directory uploads/...");
+            fs::create_directory(uploads);
+        }
+        stat = fs::status(uploads);
+        if (stat.type() != fs::file_type::directory)
+        {
+            OATPP_LOGE("PENEfiles", "PENEfiles cannot create uploads. This is very bad, so uploads are off.");
+
+            auto res = ResponseDto::createShared();
+            res->status = 500;
+            res->message = "Server side upload folder error";
+            return createDtoResponse(Status::CODE_200, res);
+        }
 
         auto mp = std::make_shared<multipart::PartList>(request->getHeaders());
         multipart::Reader mp_reader(mp.get());
         
         mp_reader.setPartReader("session", multipart::createInMemoryPartReader(32));
-        mp_reader.setPartReader("file", multipart::createFilePartReader("file"));
+        std::string random_filename = uploads / penefiles_service.generate_random_string(32);
+        mp_reader.setPartReader("file", multipart::createFilePartReader(random_filename));
         request->transferBody(&mp_reader);
 
         const auto session_part = mp->getNamedPart("session");
@@ -99,13 +140,28 @@ public:
 
         OATPP_ASSERT_HTTP(file_part && file_part->getFilename(), Status::CODE_500, "File cannot be empty");
         OATPP_ASSERT_HTTP(file_part->getFilename()->c_str(), Status::CODE_500, "Incomplete file");
-        printf("FILE PART : %p\n", file_part->getFilename()->c_str());
+
+        std::string file_name = file_part->getFilename()->c_str();
+        std::cout << "Estimated type: " << PenefilesService::get_tag_by_filename(file_name) << std::endl;
+
+        std::vector<std::string> initial_tags;
+        initial_tags.insert(initial_tags.end(), 
+        {
+            user->username->c_str(),
+            PenefilesService::get_tag_by_filename(file_name)
+        });
+
+        auto file_dto = FileDto::createShared();
+        file_dto->filename = file_name;
+        file_dto->realfile = random_filename;
+        penefiles_service.create_file(file_dto, initial_tags);
+
+        OATPP_LOGI("PENEfiles", "User %s has uploaded %s. Initial tags: %s, %s.", user->username->c_str(), file_name.c_str(), initial_tags[0].c_str(), initial_tags[1].c_str());
         
-        std::cout << file_part->getFilename()->c_str() << std::endl;
-
-        std::cout << session_id << " " << user->username->c_str() << ": #parts: " << mp->count() << std::endl;
-
-        return createResponse(Status::CODE_200, "OK");
+        auto res = ResponseDto::createShared();
+        res->status = 200;
+        res->message = "File created.";
+        return createDtoResponse(Status::CODE_200, res);
     }
 };
 
