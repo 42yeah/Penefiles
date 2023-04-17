@@ -4,25 +4,44 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penefiles</title>
+    <title>PENEfiles</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="viewport">
         <div class="top-bar">
-            <h1 class="site-title">Penefiles</h1>
+            <h1 class="site-title">PENEfiles</h1>
             <div class="top-operations">
-                <div class="control-button controls">日期排序</div>
-                <div class="control-button controls">字母排序</div>
-                <div class="control-button controls">优先排序我的</div>
-                <div class="control-button controls">注册</div>
-                <div class="control-button controls">登陆</div>
+                <div class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/date.svg">
+                    <div>日期排序</div>
+                </div>
+                <div class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/textfield_rename.svg">
+                    <div>文件名排序</div>
+                </div>
+                <div class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/status_online.svg">
+                    <div>先排序我的</div>
+                </div>
+                <div onclick="session.register()" class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/asterisk_yellow.svg">
+                    <div>注册</div>
+                </div>
+                <div onclick="session.login()" class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/key.svg">
+                    <div>登陆</div>
+                </div>
+                <div onclick="session.tests()" class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/bug_go.svg">
+                    <div>调试</div>
+                </div>
             </div>
         </div>
         <div class="container">
             <div class="files-pane">
                 <div class="file-list">
-                    <div class="file-entry">
+                    <div class="file-entry controls">
                         <div class="file-info">
                             <div class="file-name">
                                 毕业论文.pdf
@@ -43,7 +62,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="file-entry">
+                    <div class="file-entry controls">
                         <div class="file-info">
                             <div class="file-name">
                                 SEM 压缩包.zip
@@ -70,7 +89,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="file-entry">
+                    <div class="file-entry controls">
                         <div class="file-info">
                             <div class="file-name">
                                 main.cpp
@@ -91,7 +110,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="selected file-entry has-preview">
+                    <div class="selected file-entry has-preview controls">
                         <div class="file-preview">
                             <img class="preview-image" src="assets/180821.jpg">
                         </div>
@@ -114,6 +133,30 @@
                                 </div>
                                 <div class="tag">
                                     SEM
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-entry controls">
+                        <div class="file-info">
+                            <div class="file-name">
+                                使用说明
+                            </div>
+                            <div class="tags">
+                                <div class="invisible tag">
+                                    12K
+                                </div>
+                                <div class="invisible tag">
+                                    2023-04-31
+                                </div>
+                                <div class="user tag">
+                                    42yeah
+                                </div>
+                                <div class="file-type tag">
+                                    笔记
+                                </div>
+                                <div class="tag">
+                                    help
                                 </div>
                             </div>
                         </div>
@@ -191,5 +234,6 @@
             </div>
         </div>
     </div>
+    <script src="js/main.js" type="module"></script>
 </body>
 </html>

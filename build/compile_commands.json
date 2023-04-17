@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/Users/apple/Projects/Penefiles/build",
-  "command": "/usr/bin/clang++ -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX13.0.sdk -o src/CMakeFiles/penefiles.dir/main.cpp.o -c /Users/apple/Projects/Penefiles/backend/src/main.cpp",
-  "file": "/Users/apple/Projects/Penefiles/backend/src/main.cpp",
-  "output": "src/CMakeFiles/penefiles.dir/main.cpp.o"
-}
-]

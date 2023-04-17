@@ -12,7 +12,6 @@ html {
     display: flex;
     min-height: 100vh;
     max-height: 100vh;
-    min-height: -webkit-fill-available;
     overflow: hidden;
     flex-direction: column;
 }
@@ -67,8 +66,16 @@ html {
     display: flex;
 }
 
+.controls {
+    cursor: pointer;
+}
+
 .controls:hover {
     background-color: #ccc;
+}
+
+.controls:active {
+    background-color: #aaa;
 }
 
 .quick-notes, .files-upload {
@@ -107,6 +114,11 @@ html {
 
 .selected {
     background-color: rgb(2, 81, 228);
+    color: white;
+}
+
+.selected:hover {
+    background-color: rgb(39, 105, 227);
     color: white;
 }
 
@@ -161,12 +173,18 @@ html {
 }
 
 .control-button {
+    user-select: none;
     border: 1px solid #aaa;
     padding: 1px 3px;
     font-size: 0.9em;
     box-shadow: 0 2px 0 0 #aaa;
     font-weight: bold;
     margin-right: 3px;
+}
+
+.control-button:active {
+    box-shadow: unset;
+    transform: translateY(2px);
 }
 
 .with-icon {
@@ -255,4 +273,26 @@ html {
     padding: 5px;
     display: inline-grid;
     grid-template-columns: 100px auto;
+}
+
+.container-center {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.control-button-row {
+    margin-right: 0;
+    margin-top: 3px;
+}
+
+.control-button-tight {
+    margin-bottom: 5px;
+}
+
+.test-operations {
+    display: flex;
+    flex-wrap: wrap;
+    padding-top: 5px;
 }
