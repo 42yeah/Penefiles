@@ -24,6 +24,9 @@ public:
     oatpp::Object<ResponseDto> login(const oatpp::Object<UserDto> &dto);
 
     oatpp::Object<CodeDto> make_code();
+
+    bool authenticate(const std::string &session_id);
+    oatpp::Object<UserDto> select_user_by_session(const std::string &session_id); 
 };
 
 

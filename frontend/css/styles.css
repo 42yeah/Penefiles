@@ -193,6 +193,15 @@ html {
     padding: 3px 3px;
 }
 
+.inline-control-button {
+    display: inline-flex;
+    align-items: center;
+}
+
+.inline-control-button > img {
+    height: 1em;
+}
+
 .info-pane {
     padding: 5px;
     overflow-y: auto;
@@ -294,5 +303,23 @@ html {
 .test-operations {
     display: flex;
     flex-wrap: wrap;
+    padding-top: 5px;
+}
+
+.superposition-window {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    border: 1px solid #aaa;
+    background-color: white;
+    padding: 5px;
+    max-width: 300px;
+}
+
+.hidden {
+    display: none;
+}
+
+.padding-top-5px {
     padding-top: 5px;
 }

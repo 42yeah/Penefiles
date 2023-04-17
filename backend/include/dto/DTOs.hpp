@@ -42,6 +42,13 @@ class CodeDto : public oatpp::DTO
     DTO_FIELD(String, code);
 };
 
+class AuthenticationDto : public oatpp::DTO
+{
+    DTO_INIT(AuthenticationDto, DTO)
+
+    DTO_FIELD(String, session);
+};
+
 #include OATPP_CODEGEN_END(DTO)
 
 #endif // PENEFILES_DTO_HPP

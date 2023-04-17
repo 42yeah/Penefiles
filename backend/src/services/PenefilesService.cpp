@@ -90,3 +90,35 @@ oatpp::Object<CodeDto> PenefilesService::make_code()
 
     return entry[0];
 }
+
+oatpp::Object<UserDto> PenefilesService::select_user_by_session(const std::string &session_id)
+{
+    auto pos = user_sessions.find(session_id);
+    // std::cout << "Looking for " << session_id << "..." << std::endl;
+    // for (auto p : user_sessions) 
+    // {
+    //     std::cout << p.first << ": " << p.second->username->c_str() << std::endl;
+    // }
+
+    OATPP_ASSERT_HTTP(pos != user_sessions.end(), Status::CODE_500, "Invalid session ID.");
+
+    auto id = pos->second->id;
+    auto result = database->select_user(id);
+    OATPP_ASSERT_HTTP(result->isSuccess(), Status::CODE_500, result->getErrorMessage());
+    OATPP_ASSERT_HTTP(result->hasMoreToFetch(), Status::CODE_500, "Cannot find user.");
+
+    auto entry = result->fetch<oatpp::Vector<oatpp::Object<UserDto> > >();
+    OATPP_ASSERT_HTTP(entry->size() == 1, Status::CODE_500, "Unknown error");
+
+    return entry[0];
+}
+
+bool PenefilesService::authenticate(const std::string &session_id)
+{
+    // Just a simple auth check.
+    if (user_sessions.find(session_id) == user_sessions.end())
+    {
+        return false;
+    }
+    return true;
+}

@@ -38,12 +38,16 @@ public:
           PARAM(oatpp::Object<UserDto>, user))
 
     QUERY(get_all_users,
-          "SELECT * FROM users;")
+          "SELECT username, tags FROM users;")
 
     QUERY(login_user, 
           "SELECT * FROM users WHERE username=:username AND password=:password;", 
           PARAM(oatpp::String, username),
           PARAM(oatpp::String, password))
+
+    QUERY(select_user,
+          "SELECT username, tags FROM users WHERE id=:id",
+          PARAM(oatpp::Int32, id));
 
     //
     // Invitation codes

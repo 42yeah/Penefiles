@@ -24,17 +24,21 @@
                     <img class="icon-controls" src="assets/status_online.svg">
                     <div>先排序我的</div>
                 </div>
-                <div onclick="session.register()" class="control-button controls with-icon">
+                <div id="register-top-control" onclick="session.register()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/asterisk_yellow.svg">
                     <div>注册</div>
                 </div>
-                <div onclick="session.login()" class="control-button controls with-icon">
+                <div id="login-top-control" onclick="session.login()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/key.svg">
                     <div>登陆</div>
                 </div>
                 <div onclick="session.tests()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/bug_go.svg">
                     <div>调试</div>
+                </div>
+                <div id="info-top-control" onclick="session.personalInfo()" class="control-button controls with-icon">
+                    <img class="icon-controls" src="assets/house.svg">
+                    <div>用户信息</div>
                 </div>
             </div>
         </div>
@@ -233,6 +237,9 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div class="hidden superposition-window">
+        
     </div>
     <script src="js/main.js" type="module"></script>
 </body>
