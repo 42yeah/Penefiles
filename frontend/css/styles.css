@@ -101,6 +101,7 @@ html {
     color: #333;
     padding: 0 5px;
     border-bottom: 1px solid #bbb;
+    padding-bottom: 2px;
 }
 
 .file-name {
@@ -134,7 +135,7 @@ html {
     border: 1px solid rgb(2, 142, 241);
     font-size: 0.8em;
     margin-right: 0.2em;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     padding: 0 3px;
     font-weight: bold;
     border-radius: 5px;

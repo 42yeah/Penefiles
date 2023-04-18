@@ -119,6 +119,24 @@ public:
         return outgoing_response;
     }
 
+    ENDPOINT("POST", "/files/delete", files_delete,
+        BODY_DTO(oatpp::Object<AuthFileInfoDto>, auth_file_info_dto))
+    {
+        OATPP_ASSERT_HTTP(auth_file_info_dto->session, Status::CODE_500, "Login first");
+        OATPP_ASSERT_HTTP(penefiles_service.authenticate(auth_file_info_dto->session), Status::CODE_500, "Not logged in.");
+
+        return createDtoResponse(Status::CODE_200, penefiles_service.delete_file(auth_file_info_dto));
+    }
+
+    ENDPOINT("POST", "/files/update", files_update,
+        BODY_DTO(oatpp::Object<AuthFileUpdateDto>, auth_file_update_dto))
+    {
+        OATPP_ASSERT_HTTP(auth_file_update_dto->session, Status::CODE_500, "Login first");
+        OATPP_ASSERT_HTTP(penefiles_service.authenticate(auth_file_update_dto->session), Status::CODE_500, "Not logged in.");
+        
+        return createDtoResponse(Status::CODE_200, penefiles_service.update_file(auth_file_update_dto));
+    }
+
     ENDPOINT("POST", "/files/upload", files_upload,
         REQUEST(std::shared_ptr<IncomingRequest>, request))
     {
@@ -184,7 +202,7 @@ public:
         
         auto res = ResponseDto::createShared();
         res->status = 200;
-        res->message = "File created.";
+        res->message = random_filename;
         return createDtoResponse(Status::CODE_200, res);
     }
 };

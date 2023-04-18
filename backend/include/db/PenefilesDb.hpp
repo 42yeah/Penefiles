@@ -108,10 +108,13 @@ public:
     QUERY(list_files,
           "SELECT * FROM files");
 
-    QUERY(get_filename_from_realfile,
+    QUERY(get_file_from_realfile,
           "SELECT * FROM files WHERE realfile=:realfile",
           PARAM(oatpp::String, realfile));
 
+    QUERY(find_tags_of_file, 
+          "SELECT * FROM files_tags WHERE fileid=:id;",
+          PARAM(oatpp::Int32, id));
 };
 
 #include OATPP_CODEGEN_END(DbClient) ///< End code-gen section

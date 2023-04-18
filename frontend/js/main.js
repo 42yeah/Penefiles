@@ -6,4 +6,8 @@ window.SQL = await initSqlJs({
 });
 
 window.session = new Penefiles();
-window.session.doRefresh();
+window.session.doRefresh().then(() => {
+    if (window.session.lastSelectedID > 0) {
+        window.session.fileInfo(window.session.lastSelectedID);
+    }
+});

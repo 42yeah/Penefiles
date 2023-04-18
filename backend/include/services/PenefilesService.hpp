@@ -32,8 +32,8 @@ public:
     static std::string generate_random_string(int n = 16);
 
     oatpp::Object<ResponseDto> create_file(const oatpp::Object<FileDto> &dto, std::vector<std::string> initial_tags);
-    oatpp::Object<ResponseDto> update_file(const oatpp::Object<FileDto> &dto);
-    oatpp::Object<ResponseDto> delete_file(const oatpp::Object<FileDto> &dto);
+    oatpp::Object<ResponseDto> update_file(const oatpp::Object<AuthFileUpdateDto> &dto);
+    oatpp::Object<ResponseDto> delete_file(const oatpp::Object<AuthFileInfoDto> &auth_file_info_dto);
     oatpp::Object<ResponseDto> tag_file(const oatpp::Object<FileTagDto> &dto);
     oatpp::Object<ResponseDto> untag_file(const oatpp::Object<FileTagDto> &dto);
     oatpp::Object<FileDto> locate_file(const std::string &realfile);

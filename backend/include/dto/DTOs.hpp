@@ -49,6 +49,15 @@ class AuthenticationDto : public oatpp::DTO
     DTO_FIELD(String, session);
 };
 
+class AuthFileInfoDto : public oatpp::DTO
+{
+    DTO_INIT(AuthFileInfoDto, DTO)
+
+    DTO_FIELD(String, session);
+    DTO_FIELD(String, realfile);
+    DTO_FIELD(String, filename);
+};
+
 class FileDto : public oatpp::DTO
 {
     DTO_INIT(FileDto, DTO);
@@ -74,6 +83,16 @@ class TagDto : public oatpp::DTO
     DTO_INIT(TagDto, DTO)
 
     DTO_FIELD(String, tag);
+};
+
+class AuthFileUpdateDto : public oatpp::DTO
+{
+    DTO_INIT(AuthFileUpdateDto, DTO)
+
+    DTO_FIELD(String, session);
+    DTO_FIELD(String, realfile);
+    DTO_FIELD(String, filename);
+    DTO_FIELD(Vector<String>, tags);
 };
 
 template<typename T>

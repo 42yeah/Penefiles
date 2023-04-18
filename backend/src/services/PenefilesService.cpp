@@ -187,10 +187,68 @@ oatpp::Object<ResponseDto> PenefilesService::create_file(const oatpp::Object<Fil
     return response;
 }
 
-oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<FileDto> &dto)
+oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<AuthFileUpdateDto> &dto)
 {
-    auto res = database->update_file(dto->id, dto->filename);
+    auto user = select_user_by_session(dto->session);
+    auto file = locate_file(dto->realfile);
+    auto res = database->find_tags_of_file(file->id);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+    bool should_update = false;
+    std::vector<std::string> file_tags;
+
+    if (!res->hasMoreToFetch())
+    {
+        OATPP_LOGI("PENEfiles", "No one owns %s. Therefore, no one can update it.", file->realfile->c_str());
+        should_update = false;
+    }
+    else 
+    {
+        // Check for user tag. If I own it, I can update it.
+        auto tags = res->fetch<oatpp::Vector<oatpp::Object<FileTagDto> > >();
+        OATPP_ASSERT_HTTP(tags->size() > 0, Status::CODE_500, "Unknown error while checking for tags during deletion");
+        for (int i = 0; i < tags->size(); i++)
+        {
+            if (tags[i]->tag == user->username)
+            {
+                should_update = true;
+            }
+            file_tags.push_back(tags[i]->tag);
+        }
+    }
+    OATPP_ASSERT_HTTP(should_update, Status::CODE_500, "You do not own this file.");
+
+    res = database->update_file(file->id, dto->filename);
+    OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+
+    std::vector<std::string> tags_to_add;
+
+    for (int i = 0; i < dto->tags->size(); i++)
+    {
+        std::string tag = dto->tags[i];
+        auto pos = std::find(file_tags.begin(), file_tags.end(), tag);
+        if (pos == file_tags.end())
+        {
+            tags_to_add.push_back(tag);
+            continue;
+        }
+        file_tags.erase(pos, pos + 1);
+    }
+
+    // 
+    // At the end of the day,
+    // Tags inside file_tags are to be removed;
+    // Tags in tags_to_add are to be added.
+    //
+    for (const auto &t : file_tags)
+    {
+        res = database->unbind_tag_from_file(file->id, t);
+        OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, "Cannot remove tag from file.");
+    }
+    for (const auto &t : tags_to_add)
+    {
+        res = database->bind_tag_to_file(file->id, t);
+        OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, "Cannot bind tag to file.");
+    }
 
     oatpp::Object<ResponseDto> response = ResponseDto::createShared();
     response->status = 200;
@@ -198,12 +256,40 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Fil
     return response;
 }
 
-oatpp::Object<ResponseDto> PenefilesService::delete_file(const oatpp::Object<FileDto> &dto)
+oatpp::Object<ResponseDto> PenefilesService::delete_file(const oatpp::Object<AuthFileInfoDto> &auth_file_info_dto)
 {
-    auto res = database->delete_file(dto->id);
+    auto user = select_user_by_session(auth_file_info_dto->session);
+    auto file = locate_file(auth_file_info_dto->realfile);
+    auto res = database->find_tags_of_file(file->id);
+    OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+    bool should_delete = false;
+
+    if (!res->hasMoreToFetch())
+    {
+        OATPP_LOGI("PENEfiles", "No one owns %s. It will be deleted now.", file->realfile->c_str());
+        should_delete = true;
+    }
+    else 
+    {
+        // Check for user tag. If I own it, I can delete it.
+        auto tags = res->fetch<oatpp::Vector<oatpp::Object<FileTagDto> > >();
+        OATPP_ASSERT_HTTP(tags->size() > 0, Status::CODE_500, "Unknown error while checking for tags during deletion");
+        for (int i = 0; i < tags->size(); i++)
+        {
+            if (tags[i]->tag == user->username)
+            {
+                should_delete = true;
+                break;
+            }
+        }
+    }
+
+    OATPP_ASSERT_HTTP(should_delete, Status::CODE_500, "You do not own this file.");
+
+    res = database->delete_file(file->id);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
-    res = database->cleanup_file_tags(dto->id);
+    res = database->cleanup_file_tags(file->id);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
     oatpp::Object<ResponseDto> response = ResponseDto::createShared();
@@ -298,7 +384,7 @@ oatpp::Object<FileDto> PenefilesService::locate_file(const std::string &realfile
 {
     std::string complete_real_file = std::string("uploads/") + realfile;
     
-    auto res = database->get_filename_from_realfile(complete_real_file);
+    auto res = database->get_file_from_realfile(complete_real_file);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_404, "File not found");
 

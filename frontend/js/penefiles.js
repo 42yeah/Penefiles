@@ -18,16 +18,18 @@ export class Penefiles {
         this.uploadFileEl = document.querySelector("#upload-file");
         this.downloadURLEl = document.querySelector("#download-url");
         this.quickSearchEl = document.querySelector("#quick-search");
-        this.lastSelectedEntry = null;
         this.API = "http://10.0.0.9:4243"
+
+        this.fileListEl.onscroll = (e) => {
+            this.fileListScrollTop = this.fileListEl.scrollTop;
+        }
 
         // Variables
         this.session = null;
         this.username = "";
-        this.fileListElContent = "";
-        this.infoPaneElContent = "";
-        this.superPositionWindowContent = "";
         this.superPositionWindowShown = false;
+        this.lastSelectedID = -1;
+        this.fileListScrollTop = 0;
 
         // Data
         this.files = [];
@@ -37,7 +39,7 @@ export class Penefiles {
 
         // SQL database
         this.createDb();
-        
+
         this.loadVariables();
         this.updateTopOperations();
     }
@@ -46,14 +48,13 @@ export class Penefiles {
         localStorage.setItem("penefiles", JSON.stringify({
             session: this.session,
             username: this.username,
-            fileListElContent: this.fileListElContent,
-            infoPaneElContent: this.infoPaneElContent,
-            superPositionWindowContent: this.superPositionWindowContent,
             superPositionWindowShown: this.superPositionWindowShown,
             files: this.files,
             tags: this.tags,
             filesTags: this.filesTags,
-            users: this.users
+            users: this.users,
+            lastSelectedID: this.lastSelectedID,
+            fileListScrollTop: this.fileListScrollTop
         }));
     }
 
@@ -69,6 +70,7 @@ export class Penefiles {
         this.tags = cached["tags"];
         this.filesTags = cached["filesTags"];
         this.users = cached["users"];
+        this.lastSelectedID = cached["lastSelectedID"];
 
         // Create database.
         this.updateDb();
@@ -103,7 +105,8 @@ export class Penefiles {
             findFileById: this.db.prepare("SELECT * FROM files WHERE id=:id"),
             findUserTagOfFile: this.db.prepare("SELECT * FROM users INNER JOIN files_tags WHERE username=tag AND fileid=:id;"),
             findTagsOfFile: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id;"),
-            findFileWithTags: this.db.prepare("SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query);")
+            findFileWithTags: this.db.prepare("SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query);"),
+            getFileFromRealfile: this.db.prepare("SELECT * FROM files WHERE realfile=:realfile")
         };
     }
 
@@ -141,21 +144,16 @@ export class Penefiles {
     }
 
     setFileListContent(what) {
-        this.fileListElContent = what;
         this.fileListEl.innerHTML = what;
-        this.dumpVariables();
+        this.fileListEl.scrollTop = this.fileListScrollTop;
     }
 
     setInfoPaneContent(what) {
-        this.infoPaneElContent = what;
         this.infoPaneEl.innerHTML = what;
-        this.dumpVariables();
     }
 
     setSuperpositionWindowContent(what) {
-        this.superPositionWindowContent = what;
         this.superPositionWindowEl.innerHTML = what;
-        this.dumpVariables();
     }
 
     updateTopOperations() {
@@ -175,26 +173,152 @@ export class Penefiles {
             return;
         }
         if (this.session == null) {
-            this.message("请先登陆。", "你必须要先登陆才能上传文件。");
+            this.message("请先登陆。", `你必须要先 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+                <img src="assets/key.svg" class="icon-controls">
+                <div>登陆</div>
+            </div> 才能上传文件。`);
             return;
         }
 
-        let data = new FormData();
-        data.append("session", this.session);
-        data.append("file", this.uploadFileEl.files[0]);
-        fetch(`${this.API}/files/upload`, {
+        fetch(`${this.API}/auth/preflight`, {
             method: "POST",
-            body: data
+            body: JSON.stringify({
+                session: this.session
+            })
+        }).then(res => {
+            return res.json();
+        }).then(json => {
+            if (json.status == 200) {
+                return true;
+            }
+            this.session = null;
+            this.updateTopOperations();
+            this.dumpVariables();
+            throw `你的登陆凭证已经超时。请重新 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+                    <img src="assets/key.svg" class="icon-controls">
+                    <div>登陆</div>
+                </div> 。`;
+        }).then(() => {
+            let data = new FormData();
+            data.append("session", this.session);
+            data.append("file", this.uploadFileEl.files[0]);
+            return fetch(`${this.API}/files/upload`, {
+                method: "POST",
+                body: data
+            });
         }).then(res => {
             return res.json();
         }).then(json => {
             if (json.status != 200) {
                 this.message("错误：文件上传失败。", json.message);    
             } else {
-                this.doRefresh();
+                this.doRefresh().then(() => {
+                    const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
+                    if (f.length == 0) {
+                        this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
+                        return;
+                    }
+                    this.fileInfo(f[0].id);
+                });
             }
         }).catch(e => {
             this.message("错误：文件上传失败。", e.toString());
+        });
+
+    }
+
+    doUpdate() {
+        const f = sql(this.queries.findFileById, {
+            ":id": this.lastSelectedID
+        }, true);
+        if (f.length == 0) {
+            this.message("错误：无法找到要修改的文件。", "PENEfiles 状态机估计出了某些问题。");
+            return;
+        }
+        const req = {
+            session: this.session,
+            filename: this.fileNameInputEl.value,
+            realfile: f[0].realfile.split("/")[1],
+            tags: []
+        };
+        let tagsInputValue = this.tagsInputEl.value.trim();
+        let tags = tagsInputValue.split(" ");
+        for (const t of tags) {
+            let tr = t.trim();
+            if (tr == "") {
+                continue;
+            }
+            req.tags.push(tr);
+        }
+        
+        fetch(`${this.API}/files/update`, {
+            method: "POST",
+            body: JSON.stringify(req)
+        }).then(res => {
+            return res.text();
+        }).then(text => {
+            let json = {};
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                let lines = text.split("\n");
+                this.message("错误：文件修改失败。", lines[3].split("=")[1]);
+                return;
+            }
+
+            if (json.status != 200) {
+                this.message("错误：文件修改失败。", json.message);
+                return;
+            }
+
+            this.doRefresh().then(() => {
+                setTimeout(() => {
+                    if (this.lastSelectedID == f[0].id) {
+                        this.fileInfo(f[0].id);
+                    }
+                }, 100);
+            });
+        }).catch(e => {
+            this.message("错误：文件修改失败。", e.toString());
+        });
+    }
+
+    doDelete() {
+        const f = sql(this.queries.findFileById, {
+            ":id": this.lastSelectedID
+        }, true);
+        if (f.length == 0) {
+            this.message("错误：无法找到要删除的文件。", "PENEfiles 状态机估计出了某些问题。");
+            return;
+        }
+        fetch(`${this.API}/files/delete`, {
+            method: "POST",
+            body: JSON.stringify({
+                realfile: f[0].realfile.split("/")[1],
+                filename: f[0].filename,
+                session: this.session
+            })
+        }).then(res => {
+            return res.text();
+        }).then(text => {
+            let json = {};
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                let lines = text.split("\n");
+                this.message("错误：文件删除失败。", lines[3].split("=")[1]);
+                return;
+            }
+            if (json.status != 200) {
+                this.message("错误：文件删除失败。", json.message);
+                return;
+            }
+            this.lastSelectedID = -1;
+            this.dumpVariables();
+            this.neutral();
+            this.doRefresh();
+        }).catch(e => {
+            this.message("错误：文件删除失败。", e.toString());
         });
     }
 
@@ -278,6 +402,10 @@ export class Penefiles {
 
     doQuickSearch() {
         let query = this.quickSearchEl.value;
+        if (query == "") {
+            this.setFileListContent(getFileList(sql(this.queries.listFiles, {}, false)));
+            return;
+        }
         query = query.replace("/", "");
         query = query.trim();
         let subQueries = query.split(" ");
@@ -378,10 +506,11 @@ export class Penefiles {
     }
 
     doRefresh() {
-        this.fetchAll().then(() => {
+        return this.fetchAll().then(() => {
             this.createDb();
             this.updateDb();
             this.setFileListContent(getFileList(sql(session.queries.listFiles, {}, false)));
+            this.doQuickSearch();
         });
     }
 
@@ -557,24 +686,42 @@ export class Penefiles {
         this.dumpVariables();
     }
 
+    neutral() {
+        this.setInfoPaneContent(neutralPage);
+        this.dumpVariables();
+    }
+
     fileInfo(id) {
         const f = sql(this.queries.findFileById, { ":id": id }, true);
         if (f.length == 0) {
             this.message("错误：无法找到文件 " + id, "这个文件不存在于数据库中。可能是因为代码有漏洞或者数据库已经老了。尝试刷新，或者通知 42yeah.");
+            this.lastSelectedID = -1;
+            this.dumpVariables();
             return;
         }
         
         this.setInfoPaneContent(getFileInfo(f[0]));
-        if (this.lastSelectedEntry) {
-            this.lastSelectedEntry.classList.remove("selected");
+        this.fileNameInputEl = document.querySelector("#file-name-input");
+        this.tagsInputEl = document.querySelector("#tags-input");
+
+        this.tagsInputEl.focus();
+        this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
+        this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
+
+        if (this.lastSelectedID && this.lastSelectedID > 0) {
+            const lastSelectedEl = document.querySelector("#file-entry-" + this.lastSelectedID);
+            if (lastSelectedEl) {
+                lastSelectedEl.classList.remove("selected");
+            }
         }
+        this.lastSelectedID = id;
         let thisSelectedEntry = document.querySelector("#file-entry-" + id);
-        if (thisSelectedEntry == this.lastSelectedEntry) {
+        if (this.lastSelectedID == f.id) {
             this.downloadURLEl.setAttribute("href", `${this.API}/${f[0].realfile}/${f[0].filename}`);
             this.downloadURLEl.click();
         }
-        this.lastSelectedEntry = thisSelectedEntry;
-        this.lastSelectedEntry.classList.add("selected");
+        thisSelectedEntry.classList.add("selected");
+        this.dumpVariables();
     }
 }
 
@@ -701,6 +848,11 @@ const testsPage = `
 </div>
 `;
 
+const neutralPage = `
+<div class="container-center">
+    <h1 class="gray">欢迎使用 PENEfiles。</h1>
+</div>`;
+
 function getUserInfo() {
     return `
     <h2 class="file-name-title">用户：${session.username}</h2>
@@ -772,8 +924,13 @@ function getFileList(files) {
             tagHTML += `<div class="tag">${tag.tag}</div>`;
         }
 
+        let selected = "";
+        if (session.lastSelectedID == f.id) {
+            selected = "selected";
+        }
+
         ret += `
-        <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id})" class="file-entry controls">
+        <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id})" class="file-entry controls ${selected}">
             <div class="file-info">
                 <div class="file-name">
                     ${f.filename}
@@ -843,7 +1000,7 @@ function getFileInfo(f) {
     <h2 class="file-name-title">${f.filename}</h2>
     <div class="info-pane-operations-container">
         <div class="file-operations">
-            <div class="control-button with-icon controls">
+            <div onclick="session.doDelete()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/bin.svg">
                 <div>删除文件</div>
             </div>
@@ -851,7 +1008,7 @@ function getFileInfo(f) {
                 <img class="icon-controls" src="assets/disk.svg">
                 <div>下载文件</div>
             </a>
-            <div class="control-button with-icon controls">
+            <div onclick="session.doUpdate()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/brick_go.svg">
                 <div>保存修改</div>
             </div>
@@ -859,9 +1016,15 @@ function getFileInfo(f) {
     </div>
     <div class="info-pane-operations">
         <div class="info-pane-pairs">
+            <div class="info-pane-label">文件名</div>
+            <div class="info-pane-input">
+                <input onkeydown="return checkSlash(event.key)" onchange="session.doUpdate()" id="file-name-input" class="controls info-pane-tags-input" value="${f.filename}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
             <div class="info-pane-label">标签</div>
             <div class="info-pane-input">
-                <input class="controls info-pane-tags-input" value="${tagsStr}">
+                <input onkeydown="return checkSlash(event.key)" onchange="session.doUpdate()" id="tags-input" class="controls info-pane-tags-input" value="${tagsStr}">
             </div>
         </div>
         <div class="info-pane-pairs">
@@ -901,9 +1064,18 @@ function getSize(b) {
     return (Math.round(s * 100.0) / 100.0) + unit[unitPtr];
 }
 
+window.checkSlash = (k) => {
+    if (k == "/") {
+        return false;
+    }
+    return true;
+}
+
 // Hotkeys 
-window.onkeydown = (e) => {
+window.onkeyup = (e) => {
     if (e.key == "/") {
         session.quickSearchEl.focus();
+        return true;
     }
+    return false;
 };
