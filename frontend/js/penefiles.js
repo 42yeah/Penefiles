@@ -272,11 +272,11 @@ export class Penefiles {
             }
 
             this.doRefresh().then(() => {
-                setTimeout(() => {
-                    if (this.lastSelectedID == f[0].id) {
-                        this.fileInfo(f[0].id);
-                    }
-                }, 100);
+                // setTimeout(() => {
+                //     if (this.lastSelectedID == f[0].id) {
+                //         this.fileInfo(f[0].id);
+                //     }
+                // }, 100);
             });
         }).catch(e => {
             this.message("错误：文件修改失败。", e.toString());
