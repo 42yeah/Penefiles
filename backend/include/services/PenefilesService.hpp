@@ -36,6 +36,7 @@ public:
     oatpp::Object<ResponseDto> delete_file(const oatpp::Object<FileDto> &dto);
     oatpp::Object<ResponseDto> tag_file(const oatpp::Object<FileTagDto> &dto);
     oatpp::Object<ResponseDto> untag_file(const oatpp::Object<FileTagDto> &dto);
+    oatpp::Object<FileDto> locate_file(const std::string &realfile);
 
     oatpp::Object<DataDto<oatpp::Object<UserDto> > > list_users();
     oatpp::Object<DataDto<oatpp::Object<FileDto> > > list_files();

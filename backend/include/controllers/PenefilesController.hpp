@@ -6,6 +6,8 @@
 #include <oatpp/web/server/api/ApiController.hpp>
 #include <oatpp/core/macro/codegen.hpp>
 #include <oatpp/core/macro/component.hpp>
+#include <oatpp/core/data/stream/FileStream.hpp>
+#include <oatpp/web/protocol/http/outgoing/StreamingBody.hpp>
 #include <oatpp/web/mime/multipart/FileProvider.hpp>
 #include <oatpp/web/mime/multipart/InMemoryDataProvider.hpp>
 #include <oatpp/web/mime/multipart/Reader.hpp>
@@ -97,6 +99,21 @@ public:
     ENDPOINT("GET", "/files-tags", files_tags)
     {
         return createDtoResponse(Status::CODE_200, penefiles_service.list_files_tags());
+    }
+
+    // TODO: Private login check.
+    ENDPOINT("GET", "/uploads/{realfile}/{filename}", download,
+        PATH(String, realfile),
+        PATH(String, filename))
+    {
+        auto file = penefiles_service.locate_file(realfile->c_str());
+        OATPP_LOGI("PENEfiles", "Serving %s (real: %s).", file->filename->c_str(), file->realfile->c_str());
+
+        auto body = std::make_shared<oatpp::web::protocol::http::outgoing::StreamingBody>(
+            std::make_shared<oatpp::data::stream::FileInputStream>(file->realfile->c_str())
+        );
+
+        return OutgoingResponse::createShared(Status::CODE_200, body);
     }
 
     ENDPOINT("POST", "/files/upload", files_upload,

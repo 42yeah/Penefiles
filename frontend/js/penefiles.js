@@ -25,11 +25,35 @@ export class Penefiles {
         this.infoPaneElContent = "";
         this.superPositionWindowContent = "";
         this.superPositionWindowShown = false;
+
+        // Data
         this.files = [];
         this.tags = [];
         this.filesTags = [];
         this.filesTagsDict = {};
         this.users = [];
+
+        // SQL database
+        this.db = new SQL.Database();
+        let dbExec = `CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, tags TEXT);
+            CREATE TABLE files_tags (fileid INTEGER, tag TEXT, UNIQUE(fileid, tag));
+            CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, realfile TEXT UNIQUE, created_at DEFAULT CURRENT_TIMESTAMP, modified_at DEFAULT CURRENT_TIMESTAMP);`;
+        this.db.run(dbExec);
+        this.queries = {
+            createFile: this.db.prepare("INSERT INTO files (id, filename, realfile, created_at, modified_at) VALUES (:id, :filename, :realfile, :created_at, :modified_at);"),
+            listFiles: this.db.prepare("SELECT * FROM files;"),
+            updateFile: this.db.prepare("UPDATE files SET filename=:filename WHERE id=:id;"),
+            deleteFile: this.db.prepare("DELETE FROM files WHERE id=:id;"),
+            cleanupFileTags: this.db.prepare("DELETE FROM files_tags WHERE fileid=:id;"),
+            bindTagToFile: this.db.prepare("INSERT INTO files_tags (fileid, tag) VALUES (:fileid, :tag);"),
+            unbindTagFromFile: this.db.prepare("DELETE FROM files_tags WHERE fileid=:fileid AND tag=:tag;"),
+            listTags: this.db.prepare("SELECT DISTINCT tag FROM files_tags;"),
+            listFilesTags: this.db.prepare("SELECT * FROM files_tags;"),
+            createUser: this.db.prepare("INSERT INTO users (id, username, tags) VALUES (:id, :username, :tags);"),
+            deleteUser: this.db.prepare("DELETE FROM users WHERE username=:username;"),
+            updateUser: this.db.prepare("UPDATE users SET tags=:tags WHERE username=:username;"),
+            getAllUsers: this.db.prepare("SELECT * FROM users;")
+        };
         
         this.loadVariables();
         this.updateTopOperations();
@@ -64,7 +88,43 @@ export class Penefiles {
         this.filesTags = cached["filesTags"];
         this.filesTagsDict = cached["filesTagsDict"];
         this.users = cached["users"];
+
+        // Create database.
+        this.updateDb();
+
         // TODO: update file list content.
+    }
+
+    //
+    // Update database based on files, filesTags, and users, 
+    // The three major databases.
+    //
+    updateDb() {
+        for (const f of this.files) {
+            const dict = {
+                ":id": f.id,
+                ":filename": f.filename,
+                ":realfile": f.realfile,
+                ":created_at": f.created_at,
+                ":modified_at": f.modified_at
+            };
+            this.queries.createFile.run(dict);
+        }
+        for (const u of this.users) {
+            const dict = {
+                ":id": u.id,
+                ":username": u.username,
+                ":tags": u.tags
+            };
+            this.queries.createUser.run(dict);
+        }
+        for (const ft of this.filesTags) {
+            const dict = {
+                ":fileid": ft.fileid,
+                ":tag": ft.tag
+            };
+            this.queries.bindTagToFile.run(dict);
+        }
     }
 
     setFileListContent(what) {
@@ -356,6 +416,21 @@ export class Penefiles {
         });
     }
 
+    testListAllDb() {
+        this.queries.getAllUsers.bind();
+        while (this.queries.getAllUsers.step()) {
+            console.log(this.queries.getAllUsers.getAsObject());
+        }
+        this.queries.listFiles.bind();
+        while (this.queries.listFiles.step()) {
+            console.log(this.queries.listFiles.getAsObject());
+        }
+        this.queries.listFilesTags.bind();
+        while (this.queries.listFilesTags.step()) {
+            console.log(this.queries.listFilesTags.getAsObject());
+        }
+    }
+
     // UIs
     login() {
         this.setInfoPaneContent(loginPage);
@@ -530,6 +605,10 @@ const testsPage = `
                 <img src="assets/bug_go.svg" class="icon-controls">
                 <div>测试文件上传前登陆检测</div>
             </div>
+            <div onclick="session.testListAllDb()" class="control-button controls with-icon control-button-tight">
+                <img src="assets/bug_go.svg" class="icon-controls">
+                <div>列出数据库</div>
+            </div>
         </div>
     </div>
     
@@ -635,10 +714,10 @@ function getFileInfo(f) {
                 <img class="icon-controls" src="assets/bin.svg">
                 <div>删除文件</div>
             </div>
-            <div class="control-button with-icon controls">
+            <a href="${session.API}/${f.realfile}/${f.filename}" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/disk.svg">
                 <div>下载文件</div>
-            </div>
+            </a>
             <div class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/brick_go.svg">
                 <div>保存修改</div>

@@ -238,10 +238,10 @@ oatpp::Object<DataDto<oatpp::Object<FileDto> > > PenefilesService::list_files()
 {
     auto res = database->list_files();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
-    OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files found");
+    // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files found");
 
     auto files = res->fetch<oatpp::Vector<oatpp::Object<FileDto> > >();
-    OATPP_ASSERT_HTTP(files->size() > 0, Status::CODE_500, "No files");
+    // OATPP_ASSERT_HTTP(files->size() > 0, Status::CODE_500, "No files");
 
     auto ret = DataDto<oatpp::Object<FileDto> >::createShared();
     ret->count = files->size();
@@ -253,10 +253,10 @@ oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > PenefilesService::list_files
 {
     auto res = database->list_files_tags();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
-    OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files & tags found");
+    // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files & tags found");
 
     auto files_tags = res->fetch<oatpp::Vector<oatpp::Object<FileTagDto> > >();
-    OATPP_ASSERT_HTTP(files_tags->size() > 0, Status::CODE_500, "No files & tags");
+    // OATPP_ASSERT_HTTP(files_tags->size() > 0, Status::CODE_500, "No files & tags");
 
     auto ret = DataDto<oatpp::Object<FileTagDto> >::createShared();
     ret->count = files_tags->size();
@@ -268,10 +268,10 @@ oatpp::Object<DataDto<oatpp::Object<TagDto> > > PenefilesService::list_tags()
 {
     auto res = database->list_tags();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
-    OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No tags found");
+    // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No tags found");
 
     auto tags = res->fetch<oatpp::Vector<oatpp::Object<TagDto> > >();
-    OATPP_ASSERT_HTTP(tags->size() > 0, Status::CODE_500, "No tags");
+    // OATPP_ASSERT_HTTP(tags->size() > 0, Status::CODE_500, "No tags");
 
     auto ret = DataDto<oatpp::Object<TagDto> >::createShared();
     ret->count = tags->size();
@@ -283,13 +283,27 @@ oatpp::Object<DataDto<oatpp::Object<UserDto> > > PenefilesService::list_users()
 {
     auto res = database->get_all_users();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
-    OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No users found");
+    // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No users found");
 
     auto users = res->fetch<oatpp::Vector<oatpp::Object<UserDto> > >();
-    OATPP_ASSERT_HTTP(users->size() > 0, Status::CODE_500, "No users");
+    // OATPP_ASSERT_HTTP(users->size() > 0, Status::CODE_500, "No users");
 
     auto ret = DataDto<oatpp::Object<UserDto> >::createShared();
     ret->count = users->size();
     ret->items = users;
     return ret;
+}
+
+oatpp::Object<FileDto> PenefilesService::locate_file(const std::string &realfile)
+{
+    std::string complete_real_file = std::string("uploads/") + realfile;
+    
+    auto res = database->get_filename_from_realfile(complete_real_file);
+    OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+    OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_404, "File not found");
+
+    auto file = res->fetch<oatpp::Vector<oatpp::Object<FileDto> > >();
+    OATPP_ASSERT_HTTP(file->size() == 1, Status::CODE_500, "Unknown file error");
+
+    return file[0];
 }

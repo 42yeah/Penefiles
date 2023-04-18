@@ -38,7 +38,7 @@ public:
           PARAM(oatpp::Object<UserDto>, user))
 
     QUERY(get_all_users,
-          "SELECT username, tags FROM users;")
+          "SELECT id, username, tags FROM users;")
 
     QUERY(login_user, 
           "SELECT * FROM users WHERE username=:username AND password=:password;", 
@@ -106,6 +106,10 @@ public:
 
     QUERY(list_files,
           "SELECT * FROM files");
+
+    QUERY(get_filename_from_realfile,
+          "SELECT * FROM files WHERE realfile=:realfile",
+          PARAM(oatpp::String, realfile));
 
 };
 
