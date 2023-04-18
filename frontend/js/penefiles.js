@@ -17,8 +17,9 @@ export class Penefiles {
         this.infoTopControlEl = document.querySelector("#info-top-control");
         this.uploadFileEl = document.querySelector("#upload-file");
         this.downloadURLEl = document.querySelector("#download-url");
+        this.quickSearchEl = document.querySelector("#quick-search");
         this.lastSelectedEntry = null;
-        this.API = "http://127.0.0.1:4243";
+        this.API = "http://10.0.0.9:4243"
 
         // Variables
         this.session = null;
@@ -101,7 +102,8 @@ export class Penefiles {
             fileHasTag: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id AND tag=:tag"),
             findFileById: this.db.prepare("SELECT * FROM files WHERE id=:id"),
             findUserTagOfFile: this.db.prepare("SELECT * FROM users INNER JOIN files_tags WHERE username=tag AND fileid=:id;"),
-            findTagsOfFile: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id;")
+            findTagsOfFile: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id;"),
+            findFileWithTags: this.db.prepare("SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query);")
         };
     }
 
@@ -230,6 +232,14 @@ export class Penefiles {
         });
     }
 
+    doLogout() {
+        this.message("登出成功", "你已成功退出登录。");
+        this.session = null;
+        this.updateTopOperations();
+        this.dumpVariables();
+        this.login();
+    }
+
     doRegister() {
         const username = this.usernameEl.value;
         const password = this.passwordEl.value;
@@ -266,6 +276,37 @@ export class Penefiles {
         });
     }
 
+    doQuickSearch() {
+        let query = this.quickSearchEl.value;
+        query = query.replace("/", "");
+        query = query.trim();
+        let subQueries = query.split(" ");
+        let aggregate = {};
+        let weight = 1;
+
+        for (const sub of subQueries) {
+            const things = sql(this.queries.findFileWithTags, { ":query": `%${sub}%` }, false);
+            for (const t of things) {
+                if (aggregate[t.id]) {
+                    aggregate[t.id].count += weight;
+                    continue;
+                }
+                aggregate[t.id] = t;
+                aggregate[t.id].count = weight;
+            }
+            weight *= 0.5;
+        }
+
+        let arr = [];
+        for (const t in aggregate) {
+            arr.push(aggregate[t]);
+        }
+        arr = arr.sort((a, b) => {
+            return b.count - a.count;
+        });
+        this.setFileListContent(getFileList(arr));
+    }
+
     // TODO: private data.
     fetchAll() {
 
@@ -279,8 +320,7 @@ export class Penefiles {
             }).then(json => {
                 this.files = json["items"];
                 allFour++;
-                if (allFour == 4)
-                {
+                if (allFour == 4) {
                     this.dumpVariables();
                     resolve();
                 }
@@ -295,8 +335,7 @@ export class Penefiles {
             }).then(json => {
                 this.tags = json["items"];
                 allFour++;
-                if (allFour == 4)
-                {
+                if (allFour == 4) {
                     this.dumpVariables();
                     resolve();
                 }
@@ -311,8 +350,7 @@ export class Penefiles {
             }).then(json => {
                 this.users = json["items"];
                 allFour++;
-                if (allFour == 4)
-                {
+                if (allFour == 4) {
                     this.dumpVariables();
                     resolve();
                 }
@@ -327,8 +365,7 @@ export class Penefiles {
             }).then(json => {
                 this.filesTags = json["items"];
                 allFour++;
-                if (allFour == 4)
-                {
+                if (allFour == 4) {
                     this.dumpVariables();
                     resolve();
                 }
@@ -344,7 +381,7 @@ export class Penefiles {
         this.fetchAll().then(() => {
             this.createDb();
             this.updateDb();
-            this.setFileListContent(getFileList());
+            this.setFileListContent(getFileList(sql(session.queries.listFiles, {}, false)));
         });
     }
 
@@ -669,7 +706,7 @@ function getUserInfo() {
     <h2 class="file-name-title">用户：${session.username}</h2>
     <div class="info-pane-operations-container">
         <div class="file-operations">
-            <div class="control-button with-icon controls">
+            <div onclick="session.doLogout()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/disconnect.svg">
                 <div>退出登陆</div>
             </div>
@@ -712,9 +749,9 @@ function sql(query, binds, once) {
     return ret;
 }
 
-function getFileList() {
+function getFileList(files) {
     let ret = ``;
-    const files = sql(session.queries.listFiles, {}, false);
+    
     for (const f of files) {
         let userTag = sql(session.queries.findUserTagOfFile, { ":id": f.id }, false);
         let tags = sql(session.queries.findTagsOfFile, { ":id": f.id }, false);
@@ -771,6 +808,10 @@ function getFileInfo(f) {
         ":id": f.id,
         ":tag": "Video"
     }, true);
+    const hasAudio = sql(session.queries.fileHasTag, {
+        ":id": f.id,
+        ":tag": "Audio"
+    }, true);
     
     let preview = "";
     if (hasImage.length > 0) {
@@ -786,6 +827,15 @@ function getFileInfo(f) {
                 <source src="${session.API}/${f.realfile}/${f.filename}">
                 你的浏览器也许不支持视频播放。
             </video>
+        </div>`;
+    }
+    if (hasAudio.length > 0) {
+        preview += `
+        <div class="big-image-preview">
+            <audio controls>
+                <source src="${session.API}/${f.realfile}/${f.filename}">
+                你的浏览器也许不支持视频播放。
+            </audio>
         </div>`;
     }
 
@@ -850,3 +900,10 @@ function getSize(b) {
     }
     return (Math.round(s * 100.0) / 100.0) + unit[unitPtr];
 }
+
+// Hotkeys 
+window.onkeydown = (e) => {
+    if (e.key == "/") {
+        session.quickSearchEl.focus();
+    }
+};
