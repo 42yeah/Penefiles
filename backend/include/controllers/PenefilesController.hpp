@@ -113,7 +113,10 @@ public:
             std::make_shared<oatpp::data::stream::FileInputStream>(file->realfile->c_str())
         );
 
-        return OutgoingResponse::createShared(Status::CODE_200, body);
+        auto outgoing_response = OutgoingResponse::createShared(Status::CODE_200, body);
+        outgoing_response->putHeader("Content-Length", std::to_string(file->size));
+
+        return outgoing_response;
     }
 
     ENDPOINT("POST", "/files/upload", files_upload,
@@ -158,8 +161,11 @@ public:
         OATPP_ASSERT_HTTP(file_part && file_part->getFilename(), Status::CODE_500, "File cannot be empty");
         OATPP_ASSERT_HTTP(file_part->getFilename()->c_str(), Status::CODE_500, "Incomplete file");
 
+        // Take a look at whether this file can be stat
+        auto file_stat = fs::status(random_filename);
+        OATPP_ASSERT_HTTP(fs::status_known(file_stat) && file_stat.type() != fs::file_type::not_found, Status::CODE_500, "File not uploaded");
+
         std::string file_name = file_part->getFilename()->c_str();
-        std::cout << "Estimated type: " << PenefilesService::get_tag_by_filename(file_name) << std::endl;
 
         std::vector<std::string> initial_tags;
         initial_tags.insert(initial_tags.end(), 
@@ -171,6 +177,7 @@ public:
         auto file_dto = FileDto::createShared();
         file_dto->filename = file_name;
         file_dto->realfile = random_filename;
+        file_dto->size = fs::file_size(random_filename);
         penefiles_service.create_file(file_dto, initial_tags);
 
         OATPP_LOGI("PENEfiles", "User %s has uploaded %s. Initial tags: %s, %s.", user->username->c_str(), file_name.c_str(), initial_tags[0].c_str(), initial_tags[1].c_str());

@@ -43,6 +43,7 @@ html {
 .file-list {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .bottom-bar {
@@ -104,6 +105,11 @@ html {
 
 .file-name {
     padding-top: 5px;
+    white-space: nowrap;
+}
+
+.file-name-title {
+    overflow-wrap: anywhere;
 }
 
 .tags {
@@ -208,6 +214,8 @@ html {
 .info-pane {
     padding: 5px;
     overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: -3px 0 3px #00000022;
 }
 
 .big-image-preview {
@@ -216,6 +224,13 @@ html {
 }
 
 .big-image-preview > img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 50vh;
+}
+
+.big-image-preview > video {
     width: auto;
     height: auto;
     max-width: 100%;
@@ -325,4 +340,8 @@ html {
 
 .padding-top-5px {
     padding-top: 5px;
+}
+
+.gray {
+    color: gray;
 }

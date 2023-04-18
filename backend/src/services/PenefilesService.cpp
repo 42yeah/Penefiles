@@ -167,7 +167,7 @@ std::string PenefilesService::get_tag_by_filename(const std::string &path)
 
 oatpp::Object<ResponseDto> PenefilesService::create_file(const oatpp::Object<FileDto> &dto, std::vector<std::string> initial_tags)
 {
-    auto res = database->create_file(dto->filename, dto->realfile);
+    auto res = database->create_file(dto->filename, dto->realfile, dto->size);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
     int id = oatpp::sqlite::Utils::getLastInsertRowId(res->getConnection());

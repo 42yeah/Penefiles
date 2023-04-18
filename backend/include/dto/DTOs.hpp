@@ -58,6 +58,7 @@ class FileDto : public oatpp::DTO
     DTO_FIELD(String, realfile);
     DTO_FIELD(String, created_at);
     DTO_FIELD(String, modified_at);
+    DTO_FIELD(Int32, size);
 };
 
 class FileTagDto : public oatpp::DTO

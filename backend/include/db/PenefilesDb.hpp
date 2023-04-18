@@ -87,9 +87,10 @@ public:
     // File manipulation
     //
     QUERY(create_file,
-          "INSERT INTO files (filename, realfile) VALUES (:filename, :realfile);",
+          "INSERT INTO files (filename, realfile, size) VALUES (:filename, :realfile, :size);",
           PARAM(oatpp::String, filename),
-          PARAM(oatpp::String, realfile));
+          PARAM(oatpp::String, realfile),
+          PARAM(oatpp::Int32, size));
 
     QUERY(update_file,
           "UPDATE files SET filename=:filename WHERE id=:id;",

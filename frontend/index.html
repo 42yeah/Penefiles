@@ -12,7 +12,7 @@
         <div class="top-bar">
             <h1 class="site-title">PENEfiles</h1>
             <div class="top-operations">
-                <div id="info-top-control" onclick="session.doRefresh()" class="control-button controls with-icon">
+                <div onclick="session.doRefresh()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/lightning.svg">
                     <div>刷新</div>
                 </div>
@@ -176,68 +176,16 @@
                         <div class="quick-notes controls">
                             <img src="assets/page_white_edit.svg" class="icon-controls">
                         </div>
-                        <div class="files-upload controls">
+                        <input onchange="session.doUpload()" class="hidden" id="upload-file" type="file">
+                        <label for="upload-file" class="files-upload controls">
                             <img src="assets/add.svg" class="icon-controls">
-                        </div>
+                        </label>
                     </div>
                 </div>
             </div>
             <div class="info-pane">
-                <h2 class="file-name-title">1-1.tiff</h2>
-                <div class="info-pane-operations-container">
-                    <div class="file-operations">
-                        <div class="control-button with-icon controls">
-                            <img class="icon-controls" src="assets/bin.svg">
-                            <div>删除文件</div>
-                        </div>
-                        <div class="control-button with-icon controls">
-                            <img class="icon-controls" src="assets/disk.svg">
-                            <div>下载文件</div>
-                        </div>
-                        <div class="control-button with-icon controls">
-                            <img class="icon-controls" src="assets/brick_go.svg">
-                            <div>保存修改</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="info-pane-operations-container">
-                    <div class="info-pane-operations">
-                        <div class="info-pane-pairs">
-                            <div class="info-pane-label">用户标签</div>
-                            <div class="info-pane-input">
-                                <input class="controls info-pane-tags-input disabled" value="PENE">
-                            </div>
-                        </div>
-                        <div class="info-pane-pairs">
-                            <div class="info-pane-label">标签</div>
-                            <div class="info-pane-input">
-                                <input class="controls info-pane-tags-input" value="图片 SEM">
-                            </div>
-                        </div>
-                        <div class="info-pane-pairs">
-                            <div class="info-pane-label">私有</div>
-                            <div class="info-pane-checkbox">
-                                <input class="controls" type="checkbox">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="big-image-preview">
-                    <img src="assets/180821.jpg">
-                </div>
-
-                <div class="info-pane-table-container">
-                    <div class="info-pane-table">
-                        <div class="info-pane-label">大小</div>
-                        <div>22M (23068672b)</div>
-                        <div class="info-pane-label">创建日期</div>
-                        <div>2023-04-23</div>
-                        <div class="info-pane-label">最后修改于</div>
-                        <div>2023-04-29</div>
-                        <div class="info-pane-label">上传于</div>
-                        <div>2023-04-29</div>
-                    </div>
+                <div class="container-center">
+                    <h1 class="gray">欢迎使用 PENEfiles。</h1>
                 </div>
             </div>
         </div>
@@ -245,6 +193,7 @@
     <div class="hidden superposition-window">
         
     </div>
+    <a target="_blank" href="#" id="download-url" class="hidden"></a>
     <script src="js/sqljs-wasm/sql-wasm.js"></script>
     <script src="js/main.js" type="module"></script>
 </body>

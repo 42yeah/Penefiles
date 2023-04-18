@@ -15,6 +15,8 @@ export class Penefiles {
         this.loginTopControlEl = document.querySelector("#login-top-control");
         this.registerTopControlEl = document.querySelector("#register-top-control");
         this.infoTopControlEl = document.querySelector("#info-top-control");
+        this.uploadFileEl = document.querySelector("#upload-file");
+        this.downloadURLEl = document.querySelector("#download-url");
         this.lastSelectedEntry = null;
         this.API = "http://127.0.0.1:4243";
 
@@ -30,30 +32,10 @@ export class Penefiles {
         this.files = [];
         this.tags = [];
         this.filesTags = [];
-        this.filesTagsDict = {};
         this.users = [];
 
         // SQL database
-        this.db = new SQL.Database();
-        let dbExec = `CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, tags TEXT);
-            CREATE TABLE files_tags (fileid INTEGER, tag TEXT, UNIQUE(fileid, tag));
-            CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, realfile TEXT UNIQUE, created_at DEFAULT CURRENT_TIMESTAMP, modified_at DEFAULT CURRENT_TIMESTAMP);`;
-        this.db.run(dbExec);
-        this.queries = {
-            createFile: this.db.prepare("INSERT INTO files (id, filename, realfile, created_at, modified_at) VALUES (:id, :filename, :realfile, :created_at, :modified_at);"),
-            listFiles: this.db.prepare("SELECT * FROM files;"),
-            updateFile: this.db.prepare("UPDATE files SET filename=:filename WHERE id=:id;"),
-            deleteFile: this.db.prepare("DELETE FROM files WHERE id=:id;"),
-            cleanupFileTags: this.db.prepare("DELETE FROM files_tags WHERE fileid=:id;"),
-            bindTagToFile: this.db.prepare("INSERT INTO files_tags (fileid, tag) VALUES (:fileid, :tag);"),
-            unbindTagFromFile: this.db.prepare("DELETE FROM files_tags WHERE fileid=:fileid AND tag=:tag;"),
-            listTags: this.db.prepare("SELECT DISTINCT tag FROM files_tags;"),
-            listFilesTags: this.db.prepare("SELECT * FROM files_tags;"),
-            createUser: this.db.prepare("INSERT INTO users (id, username, tags) VALUES (:id, :username, :tags);"),
-            deleteUser: this.db.prepare("DELETE FROM users WHERE username=:username;"),
-            updateUser: this.db.prepare("UPDATE users SET tags=:tags WHERE username=:username;"),
-            getAllUsers: this.db.prepare("SELECT * FROM users;")
-        };
+        this.createDb();
         
         this.loadVariables();
         this.updateTopOperations();
@@ -70,7 +52,6 @@ export class Penefiles {
             files: this.files,
             tags: this.tags,
             filesTags: this.filesTags,
-            filesTagsDict: this.filesTagsDict,
             users: this.users
         }));
     }
@@ -86,13 +67,42 @@ export class Penefiles {
         this.files = cached["files"];
         this.tags = cached["tags"];
         this.filesTags = cached["filesTags"];
-        this.filesTagsDict = cached["filesTagsDict"];
         this.users = cached["users"];
 
         // Create database.
         this.updateDb();
 
         // TODO: update file list content.
+    }
+
+    // 
+    // Initialize database with associated operations.
+    //
+    createDb() {
+        this.db = new SQL.Database();
+        let dbExec = `CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, tags TEXT);
+            CREATE TABLE files_tags (fileid INTEGER, tag TEXT, UNIQUE(fileid, tag));
+            CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, realfile TEXT UNIQUE, created_at DEFAULT CURRENT_TIMESTAMP, modified_at DEFAULT CURRENT_TIMESTAMP, size INTEGER);`;
+        this.db.run(dbExec);
+        this.queries = {
+            createFile: this.db.prepare("INSERT INTO files (id, filename, realfile, created_at, modified_at, size) VALUES (:id, :filename, :realfile, :created_at, :modified_at, :size);"),
+            listFiles: this.db.prepare("SELECT * FROM files;"),
+            updateFile: this.db.prepare("UPDATE files SET filename=:filename WHERE id=:id;"),
+            deleteFile: this.db.prepare("DELETE FROM files WHERE id=:id;"),
+            cleanupFileTags: this.db.prepare("DELETE FROM files_tags WHERE fileid=:id;"),
+            bindTagToFile: this.db.prepare("INSERT INTO files_tags (fileid, tag) VALUES (:fileid, :tag);"),
+            unbindTagFromFile: this.db.prepare("DELETE FROM files_tags WHERE fileid=:fileid AND tag=:tag;"),
+            listTags: this.db.prepare("SELECT DISTINCT tag FROM files_tags;"),
+            listFilesTags: this.db.prepare("SELECT * FROM files_tags;"),
+            createUser: this.db.prepare("INSERT INTO users (id, username, tags) VALUES (:id, :username, :tags);"),
+            deleteUser: this.db.prepare("DELETE FROM users WHERE username=:username;"),
+            updateUser: this.db.prepare("UPDATE users SET tags=:tags WHERE username=:username;"),
+            getAllUsers: this.db.prepare("SELECT * FROM users;"),
+            fileHasTag: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id AND tag=:tag"),
+            findFileById: this.db.prepare("SELECT * FROM files WHERE id=:id"),
+            findUserTagOfFile: this.db.prepare("SELECT * FROM users INNER JOIN files_tags WHERE username=tag AND fileid=:id;"),
+            findTagsOfFile: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id;")
+        };
     }
 
     //
@@ -106,7 +116,8 @@ export class Penefiles {
                 ":filename": f.filename,
                 ":realfile": f.realfile,
                 ":created_at": f.created_at,
-                ":modified_at": f.modified_at
+                ":modified_at": f.modified_at,
+                ":size": f.size
             };
             this.queries.createFile.run(dict);
         }
@@ -155,6 +166,34 @@ export class Penefiles {
             this.registerTopControlEl.classList.add("hidden");
             this.infoTopControlEl.classList.remove("hidden");
         }
+    }
+
+    doUpload() {
+        if (this.uploadFileEl.length == 0) {
+            return;
+        }
+        if (this.session == null) {
+            this.message("请先登陆。", "你必须要先登陆才能上传文件。");
+            return;
+        }
+
+        let data = new FormData();
+        data.append("session", this.session);
+        data.append("file", this.uploadFileEl.files[0]);
+        fetch(`${this.API}/files/upload`, {
+            method: "POST",
+            body: data
+        }).then(res => {
+            return res.json();
+        }).then(json => {
+            if (json.status != 200) {
+                this.message("错误：文件上传失败。", json.message);    
+            } else {
+                this.doRefresh();
+            }
+        }).catch(e => {
+            this.message("错误：文件上传失败。", e.toString());
+        });
     }
 
     doLogin() {
@@ -210,7 +249,6 @@ export class Penefiles {
         }).then(text => {
             try {
                 const json = JSON.parse(text);
-                console.log(json);
                 if (json.status == 200) {
                     this.message("注册成功", `请跳转至 
                     <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
@@ -288,15 +326,6 @@ export class Penefiles {
                 return res.json();
             }).then(json => {
                 this.filesTags = json["items"];
-                this.filesTagsDict = {};
-                for (let i = 0; i < this.filesTags.length; i++) {
-                    let d = this.filesTagsDict[this.filesTags[i].fileid];
-                    if (!d) {
-                        this.filesTagsDict[this.filesTags[i].fileid] = [ this.filesTags[i].tag ];
-                    } else {
-                        d.push(this.filesTags[i].tag);
-                    }
-                }
                 allFour++;
                 if (allFour == 4)
                 {
@@ -312,8 +341,9 @@ export class Penefiles {
     }
 
     doRefresh() {
-        getFileList();
         this.fetchAll().then(() => {
+            this.createDb();
+            this.updateDb();
             this.setFileListContent(getFileList());
         });
     }
@@ -431,6 +461,15 @@ export class Penefiles {
         }
     }
 
+    // Arbitrary Query Execution.
+    testAQE() {
+        const stmt = this.db.prepare(this.testInputEl.value);
+        while (stmt.step()) {
+            console.log(stmt.getAsObject());
+        }
+        stmt.free();
+    }
+
     // UIs
     login() {
         this.setInfoPaneContent(loginPage);
@@ -482,16 +521,22 @@ export class Penefiles {
     }
 
     fileInfo(id) {
-        for (let i = 0; i < this.files.length; i++) {
-            if (this.files[i].id == id) {
-                this.setInfoPaneContent(getFileInfo(this.files[i]));
-                break;
-            }
+        const f = sql(this.queries.findFileById, { ":id": id }, true);
+        if (f.length == 0) {
+            this.message("错误：无法找到文件 " + id, "这个文件不存在于数据库中。可能是因为代码有漏洞或者数据库已经老了。尝试刷新，或者通知 42yeah.");
+            return;
         }
+        
+        this.setInfoPaneContent(getFileInfo(f[0]));
         if (this.lastSelectedEntry) {
             this.lastSelectedEntry.classList.remove("selected");
         }
-        this.lastSelectedEntry = document.querySelector("#file-entry-" + id);
+        let thisSelectedEntry = document.querySelector("#file-entry-" + id);
+        if (thisSelectedEntry == this.lastSelectedEntry) {
+            this.downloadURLEl.setAttribute("href", `${this.API}/${f[0].realfile}/${f[0].filename}`);
+            this.downloadURLEl.click();
+        }
+        this.lastSelectedEntry = thisSelectedEntry;
         this.lastSelectedEntry.classList.add("selected");
     }
 }
@@ -609,6 +654,10 @@ const testsPage = `
                 <img src="assets/bug_go.svg" class="icon-controls">
                 <div>列出数据库</div>
             </div>
+            <div onclick="session.testAQE()" class="control-button controls with-icon control-button-tight">
+                <img src="assets/bug_go.svg" class="icon-controls">
+                <div>任意查询</div>
+            </div>
         </div>
     </div>
     
@@ -651,29 +700,41 @@ function getUserInfo() {
     `;
 }
 
+function sql(query, binds, once) {
+    query.bind(binds);
+    let ret = [];
+    while (query.step()) {
+        ret.push(query.getAsObject());
+        if (once) {
+            break;
+        }
+    }
+    return ret;
+}
+
 function getFileList() {
     let ret = ``;
-    for (let i = 0; i < session.files.length; i++) {
-    
-        const f = session.files[i];
-        let userTag = null;
-        let otherTags = "";
-        for (let i = 0; i < session.filesTagsDict[f.id].length; i++) {
-            const tag = session.filesTagsDict[f.id][i];
-            console.log(tag);
-            if (userTag == null) {
-                for (let j = 0; j < session.users.length; j++) {
-                    if (session.users[j].username == tag) {
-                        userTag = tag;
-                        break;
-                    }
+    const files = sql(session.queries.listFiles, {}, false);
+    for (const f of files) {
+        let userTag = sql(session.queries.findUserTagOfFile, { ":id": f.id }, false);
+        let tags = sql(session.queries.findTagsOfFile, { ":id": f.id }, false);
+
+        let tagHTML = "";
+        for (const tag of tags) {
+            let isUserTag = false;
+            for (const u of userTag) {
+                if (tag.tag == u.tag) {
+                    tagHTML += `<div class="user tag">${tag.tag}</div>`;
+                    isUserTag = true;
+                    break;
                 }
             }
-            if (tag != userTag) {
-                otherTags += `<div class="tag">${tag}</div>`;
+            if (isUserTag) {
+                continue;
             }
-            
+            tagHTML += `<div class="tag">${tag.tag}</div>`;
         }
+
         ret += `
         <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id})" class="file-entry controls">
             <div class="file-info">
@@ -682,30 +743,52 @@ function getFileList() {
                 </div>
                 <div class="tags">
                     <div class="invisible tag">
-                        20M
+                        ${getSize(f.size)}
                     </div>
                     <div class="invisible tag">
                         ${f.created_at.split(" ")[0]}
                     </div>
-                    <div class="user tag">
-                        ${userTag}
-                    </div>
-                    <!-- <div class="file-type tag">文档</div> -->
-                    ${otherTags}
+                    ${tagHTML}
                 </div>
             </div>
-        </div>
-        `;
+        </div>`
     }
     return ret;
 }
 
 function getFileInfo(f) {
-    console.log(f);
-    let tags = "";
-    for (let i = 0; i < session.filesTagsDict[f.id].length; i++) {
-        tags += session.filesTagsDict[f.id][i] + " ";
+    let tagsStr = "";
+    let tags = sql(session.queries.findTagsOfFile, { ":id": f.id }, false);
+    for (const t of tags) {
+        tagsStr += t.tag + " ";
     }
+
+    const hasImage = sql(session.queries.fileHasTag, {
+        ":id": f.id,
+        ":tag": "Image"
+    }, true);
+    const hasVideo = sql(session.queries.fileHasTag, {
+        ":id": f.id,
+        ":tag": "Video"
+    }, true);
+    
+    let preview = "";
+    if (hasImage.length > 0) {
+        preview += `
+        <div class="big-image-preview">
+            <img src="${session.API}/${f.realfile}/${f.filename}">
+        </div>`;
+    }
+    if (hasVideo.length > 0) {
+        preview += `
+        <div class="big-image-preview">
+            <video controls>
+                <source src="${session.API}/${f.realfile}/${f.filename}">
+                你的浏览器也许不支持视频播放。
+            </video>
+        </div>`;
+    }
+
     return `
     <h2 class="file-name-title">${f.filename}</h2>
     <div class="info-pane-operations-container">
@@ -728,7 +811,7 @@ function getFileInfo(f) {
         <div class="info-pane-pairs">
             <div class="info-pane-label">标签</div>
             <div class="info-pane-input">
-                <input class="controls info-pane-tags-input" value="${tags}">
+                <input class="controls info-pane-tags-input" value="${tagsStr}">
             </div>
         </div>
         <div class="info-pane-pairs">
@@ -738,10 +821,11 @@ function getFileInfo(f) {
             </div>
         </div>
     </div>
+    ${preview}
     <div class="info-pane-table-container">
         <div class="info-pane-table">
             <div class="info-pane-label">大小</div>
-            <div>22M (23068672b)</div>
+            <div>${getSize(f.size)} (${f.size}b)</div>
             <div class="info-pane-label">创建日期</div>
             <div>${f.created_at}</div>
             <div class="info-pane-label">最后修改于</div>
@@ -751,4 +835,18 @@ function getFileInfo(f) {
         </div>
     </div>
     `;
+}
+
+function getSize(b) {
+    let s = b;
+    let unit = ["b", "K", "M", "G", "T"];
+    let unitPtr = 0;
+    while (s > 1024) {
+        s /= 1024;
+        unitPtr++;
+        if (unitPtr == unit.length - 1) {
+            break;
+        }
+    }
+    return (Math.round(s * 100.0) / 100.0) + unit[unitPtr];
 }
