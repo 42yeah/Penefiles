@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <random>
+#include <mutex>
 #include <oatpp/web/protocol/http/Http.hpp>
 #include <oatpp/core/macro/codegen.hpp>
 #include <oatpp/core/macro/component.hpp>
@@ -18,6 +19,7 @@ private:
     OATPP_COMPONENT(std::shared_ptr<PenefilesDb>, database);
 
     std::map<std::string, oatpp::Object<UserDto> > user_sessions;
+    std::mutex mu;
 
 public:
     oatpp::Object<ResponseDto> create_user(const oatpp::Object<UserRegistrationDto> &dto);

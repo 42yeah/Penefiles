@@ -10,7 +10,7 @@
 <body>
     <div class="viewport">
         <div class="top-bar">
-            <h1 class="site-title">PENEfiles</h1>
+            <h1 class="site-title">PENEfiles <span class="gray hidden mobile">mini</span></h1>
             <div class="top-operations">
                 <div onclick="session.doRefresh()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/lightning.svg">
@@ -23,10 +23,6 @@
                 <div onclick="session.toggleSortByName()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/textfield_rename.svg">
                     <div id="sort-by-name">无文件名排序</div>
-                </div>
-                <div onclick="session.toggleSortMineFirst()" class="control-button controls with-icon">
-                    <img class="icon-controls" src="assets/status_online.svg">
-                    <div>先排序我的</div>
                 </div>
                 <div id="register-top-control" onclick="session.register()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/asterisk_yellow.svg">
@@ -41,7 +37,7 @@
                     <div>调试</div>
                 </div>
                 <div id="info-top-control" onclick="session.personalInfo()" class="control-button controls with-icon">
-                    <img class="icon-controls" src="assets/house.svg">
+                    <img class="icon-controls" src="assets/status_online.svg">
                     <div>用户信息</div>
                 </div>
             </div>

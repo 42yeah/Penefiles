@@ -26,8 +26,7 @@ export class Penefiles {
         this.uploadEntryRestEl = document.querySelector(".upload-entry-rest");
         this.sortByDateEl = document.querySelector("#sort-by-date");
         this.sortByNameEl = document.querySelector("#sort-by-name");
-        this.multiSelect = [];
-        this.API = "http://10.0.0.9:4243"
+        this.API = "http://127.0.0.1:4243"
 
         this.fileListEl.onscroll = (e) => {
             this.fileListScrollTop = this.fileListEl.scrollTop;
@@ -38,13 +37,13 @@ export class Penefiles {
         this.username = "";
         this.superPositionInfoWindowShown = false;
         this.lastSelectedID = -1;
+        this.multiSelect = [];
         this.fileListScrollTop = 0;
         this.upload = null;
         this.uploadQueue = [];
-
+        this.presentedFiles = [];
         this.sortByDate = 0;
         this.sortByName = 0;
-        this.sortMineFirst = false;
 
         // Data
         this.files = [];
@@ -68,8 +67,9 @@ export class Penefiles {
             tags: this.tags,
             filesTags: this.filesTags,
             users: this.users,
-            lastSelectedID: this.lastSelectedID,
-            fileListScrollTop: this.fileListScrollTop
+            fileListScrollTop: this.fileListScrollTop,
+            sortByName: this.sortByName,
+            sortByDate: this.sortByDate
         }));
     }
 
@@ -85,7 +85,8 @@ export class Penefiles {
         this.tags = cached["tags"];
         this.filesTags = cached["filesTags"];
         this.users = cached["users"];
-        this.lastSelectedID = cached["lastSelectedID"];
+        this.sortByName = cached["sortByName"];
+        this.sortByDate = cached["sortByDate"];
 
         // Create database.
         this.updateDb();
@@ -219,6 +220,32 @@ export class Penefiles {
             this.loginTopControlEl.classList.add("hidden");
             this.registerTopControlEl.classList.add("hidden");
             this.infoTopControlEl.classList.remove("hidden");
+        }
+        switch (this.sortByDate) {
+            case 0:
+                this.sortByDateEl.innerHTML = "无日期排序";
+                break;
+
+            case 1:
+                this.sortByDateEl.innerHTML = "日期倒序";
+                break;
+
+            case 2:
+                this.sortByDateEl.innerHTML = "日期正序";
+                break;
+        }
+        switch (this.sortByName) {
+            case 0:
+                this.sortByNameEl.innerHTML = "无文件名排序";
+                break;
+
+            case 1:
+                this.sortByNameEl.innerHTML = "文件名正序";
+                break;
+
+            case 2:
+                this.sortByNameEl.innerHTML = "文件名倒序";
+                break;
         }
     }
 
@@ -409,39 +436,16 @@ export class Penefiles {
             req.tags.push(tr);
         }
         
-        fetch(`${this.API}/files/update`, {
-            method: "POST",
-            body: JSON.stringify(req)
-        }).then(res => {
-            return res.text();
-        }).then(text => {
-            let json = {};
-            try {
-                json = JSON.parse(text);
-            } catch (e) {
-                let lines = text.split("\n");
-                this.message("错误：文件修改失败。", lines[3].split("=")[1]);
-                return;
-            }
-
-            if (json.status != 200) {
-                this.message("错误：文件修改失败。", json.message);
-                return;
-            }
-
-            this.doRefresh().then(() => {
-                // setTimeout(() => {
-                //     if (this.lastSelectedID == f[0].id) {
-                //         this.fileInfo(f[0].id);
-                //     }
-                // }, 100);
-            });
+        this.updateOne(req).then(() => {
+            setTimeout(() => {
+                this.doRefresh();
+            }, 100);
         }).catch(e => {
-            this.message("错误：文件修改失败。", e.toString());
+            this.message("错误：无法修改文件。", e.toString());
         });
     }
 
-    doDelete() {
+    doDelete(refresh = true) {
         const f = sql(this.queries.findFileById, {
             ":id": this.lastSelectedID
         }, true);
@@ -449,7 +453,7 @@ export class Penefiles {
             this.message("错误：无法找到要删除的文件。", "PENEfiles 状态机估计出了某些问题。");
             return;
         }
-        fetch(`${this.API}/files/delete`, {
+        return fetch(`${this.API}/files/delete`, {
             method: "POST",
             body: JSON.stringify({
                 realfile: f[0].realfile.split("/")[1],
@@ -472,9 +476,11 @@ export class Penefiles {
                 return;
             }
             this.lastSelectedID = -1;
-            this.dumpVariables();
-            this.neutral();
-            this.doRefresh();
+            if (refresh) {
+                this.neutral();
+                this.doRefresh();
+                this.dumpVariables();
+            }
         }).catch(e => {
             this.message("错误：文件删除失败。", e.toString());
         });
@@ -572,11 +578,22 @@ export class Penefiles {
     }
 
     doQuickSearch() {
+        // if (this.multiSelect.length > 0) {
+        //     for (const f of this.multiSelect) {
+        //         document.querySelector("#file-entry-" + f.id).classList.remove("selected");
+        //     }
+        //     this.multiSelect = [];
+        //     this.lastSelectedID = -1;
+        //     this.neutral();
+        // }
+
         let begin = new Date();
 
         let query = this.quickSearchEl.value;
         if (query == "") {
-            this.setFileListContent(getFileList(sql(this.queries.subQueries[this.sortByDate * 10 + this.sortByName], {}, false)));
+            const files = sql(this.queries.subQueries[this.sortByDate * 10 + this.sortByName], {}, false)
+            this.presentedFiles = files;
+            this.setFileListContent(getFileList(files));
             return;
         }
         query = query.replace("/", "");
@@ -607,10 +624,37 @@ export class Penefiles {
         arr = arr.sort((a, b) => {
             return b.count - a.count;
         });
+        this.presentedFiles = arr;
         this.setFileListContent(getFileList(arr));
 
         let end = new Date();
         console.log("quick search profile: ", (end - begin) / 1000.0, "s");
+    }
+
+    // TODO TODO
+    updateOne(req) {
+        return fetch(`${this.API}/files/update`, {
+            method: "POST",
+            body: JSON.stringify(req)
+        }).then(res => {
+            return res.text();
+        }).then(text => {
+            let json = {};
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                let lines = text.split("\n");
+                throw lines[3].split("=")[1];
+            }
+
+            if (json.status != 200) {
+                throw json.message;
+            }
+
+            return true;
+        }).catch(e => {
+            this.message("错误：文件修改失败。", e.toString());
+        });
     }
 
     // TODO: private data.
@@ -690,6 +734,74 @@ export class Penefiles {
             // this.setFileListContent(getFileList(sql(session.queries.listFiles, {}, false)));
             this.doQuickSearch();
         });
+    }
+
+    doMultiDelete() {
+        let deleted = 0;
+        const toDelete = this.multiSelect.length;
+        for (let i = 0; i < this.multiSelect.length; i++) {
+            this.lastSelectedID = this.multiSelect[i].id;
+
+            this.doDelete(false).then(() => {
+                deleted++;
+                if (deleted == toDelete) {
+                    this.doRefresh();
+                    this.dumpVariables();
+                }
+            }).catch(e => {
+                deleted++;
+                if (deleted == toDelete) {
+                    this.doRefresh();
+                    this.dumpVariables();
+                }
+            });
+
+            sql(this.queries.deleteFile, { ":id": this.multiSelect[i].id }, true);
+        }
+        this.neutral();
+        this.doQuickSearch();
+    }
+
+    doMultiDownload() {
+        for (let i = 0; i < this.multiSelect.length; i++) {
+            const f = this.multiSelect[i];
+            this.downloadURLEl.setAttribute("href", `${this.API}/${f.realfile}/${f.filename}`);
+            this.downloadURLEl.click();
+        }
+    }
+
+    doMultiUpdate() {
+        let updated = 0;
+        const toUpdate = this.multiSelect.length;
+
+        const reqTags = [];
+        let tagsInputValue = this.tagsInputEl.value.trim();
+        let tags = tagsInputValue.split(" ");
+        for (const t of tags) {
+            let tr = t.trim();
+            if (tr == "") {
+                continue;
+            }
+            reqTags.push(tr);
+        }
+
+        for (let i = 0; i < toUpdate; i++) {
+            const req = {
+                session: this.session,
+                filename: this.multiSelect[i].filename,
+                realfile: this.multiSelect[i].realfile.split("/")[1],
+                tags: reqTags
+            };
+
+            this.updateOne(req).catch(e => {
+                this.message("错误：无法修改 " + this.multiSelect[i].filename + "。", e.toString());
+            }).finally(() => {
+                updated++;
+                if (updated == toUpdate) {
+                    this.doRefresh();
+                }
+            });
+        }
     }
 
     testGet() {
@@ -873,7 +985,115 @@ export class Penefiles {
 
     fileInfo(id, event) {
         const f = sql(this.queries.findFileById, { ":id": id }, true);
-        // TODO: multiselect.
+
+        let hasMultiSelect = this.multiSelect.length > 0;
+        if (event && event.shiftKey && this.lastSelectedID > 0) {
+            if (hasMultiSelect) {
+                for (const f of this.multiSelect) {
+                    const fileEl = document.querySelector("#file-entry-" + f.id);
+                    if (fileEl) {
+                        fileEl.classList.remove("selected");
+                    }
+                }
+                this.multiSelect = [];
+            }
+
+            let begin = -1, end = -1;
+            hasMultiSelect = true;
+            
+            for (let i = 0; i < this.presentedFiles.length && (begin == -1 || end == -1); i++) {
+                if (this.presentedFiles[i].id == this.lastSelectedID) {
+                    begin = i;
+                }
+                if (this.presentedFiles[i].id == id) {
+                    end = i;
+                }
+            }
+            if (begin != end) {
+                if (end < begin) {
+                    let swp = end;
+                    end = begin;
+                    begin = swp;
+                }
+                for (let i = begin; i <= end; i++) {
+                    this.multiSelect.push(this.presentedFiles[i]);
+                    document.querySelector("#file-entry-" + this.presentedFiles[i].id).classList.add("selected");
+                }
+                this.setInfoPaneContent(getMultiselect(this.multiSelect));
+                this.tagsInputEl = document.querySelector("#tags-input");
+                this.tagsInputEl.focus();
+                this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
+                this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
+                
+                return;    
+            } 
+        } else if (event && (event.ctrlKey || event.metaKey) && this.lastSelectedID > 0) {
+            if (!hasMultiSelect) {
+                let first = -1, second = -1;
+
+                if (this.lastSelectedID == id) {
+                    this.lastSelectedID = -1;
+                    this.multiSelect = [];
+                    this.doQuickSearch();
+                    this.neutral();
+                    return;
+                }
+
+                for (let i = 0; i < this.presentedFiles.length && (first == -1 || second == -1); i++) {
+                    if (this.presentedFiles[i].id == this.lastSelectedID) {
+                        first = i;
+                        document.querySelector("#file-entry-" + this.presentedFiles[i].id).classList.add("selected");
+                    }
+                    if (this.presentedFiles[i].id == id) {
+                        second = i;
+                        document.querySelector("#file-entry-" + this.presentedFiles[i].id).classList.add("selected");
+                    }
+                }
+                this.multiSelect.push(this.presentedFiles[first]);
+                this.multiSelect.push(this.presentedFiles[second]);
+            } else {
+                let removal = false;
+                //
+                // Is it already inside multiSelect?
+                //
+                for (let i = 0; i < this.multiSelect.length; i++) {
+                    if (this.multiSelect[i].id == id) {
+                        this.multiSelect.splice(i, 1);
+                        removal = true;
+                        document.querySelector("#file-entry-" + id).classList.remove("selected");
+                        break;
+                    }
+                }
+                if (!removal) {
+                    for (let i = 0; i < this.presentedFiles.length; i++) {
+                        if (this.presentedFiles[i].id == id) {
+                            this.multiSelect.push(this.presentedFiles[i]);
+                            document.querySelector("#file-entry-" + id).classList.add("selected");
+                            break;
+                        }
+                    }
+                }
+            }
+            if (this.multiSelect.length == 0) {
+                this.neutral();
+            } else {
+                this.setInfoPaneContent(getMultiselect(this.multiSelect));
+            }
+
+            return;
+
+        }
+
+        if (hasMultiSelect) {
+            for (const f of this.multiSelect) {
+                const fileEl = document.querySelector("#file-entry-" + f.id);
+                if (fileEl) {
+                    fileEl.classList.remove("selected");
+                }
+            }
+            this.multiSelect = [];
+            this.lastSelectedID = -1;
+        }
 
         if (f.length == 0) {
             this.message("错误：无法找到文件 " + id, "这个文件不存在于数据库中。可能是因为代码有漏洞或者数据库已经老了。尝试刷新，或者通知 42yeah.");
@@ -895,13 +1115,14 @@ export class Penefiles {
             if (lastSelectedEl) {
                 lastSelectedEl.classList.remove("selected");
             }
+            if (this.lastSelectedID == f[0].id) {
+                this.downloadURLEl.setAttribute("href", `${this.API}/${f[0].realfile}/${f[0].filename}`);
+                this.downloadURLEl.click();
+            }
         }
-        this.lastSelectedID = id;
         let thisSelectedEntry = document.querySelector("#file-entry-" + id);
-        if (this.lastSelectedID == f.id) {
-            this.downloadURLEl.setAttribute("href", `${this.API}/${f[0].realfile}/${f[0].filename}`);
-            this.downloadURLEl.click();
-        }
+        
+        this.lastSelectedID = id;
         thisSelectedEntry.classList.add("selected");
         this.dumpVariables();
     }
@@ -912,42 +1133,13 @@ export class Penefiles {
 
     toggleSortByDate() {
         this.sortByDate = (this.sortByDate + 1) % 3;
-        switch (this.sortByDate) {
-            case 0:
-                this.sortByDateEl.innerHTML = "无日期排序";
-                break;
-
-            case 1:
-                this.sortByDateEl.innerHTML = "日期倒序";
-                break;
-
-            case 2:
-                this.sortByDateEl.innerHTML = "日期正序";
-                break;
-        }
+        this.updateTopOperations();
         this.doQuickSearch();
     }
 
     toggleSortByName() {
         this.sortByName = (this.sortByName + 1) % 3;
-        switch (this.sortByName) {
-            case 0:
-                this.sortByNameEl.innerHTML = "无文件名排序";
-                break;
-
-            case 1:
-                this.sortByNameEl.innerHTML = "文件名正序";
-                break;
-
-            case 2:
-                this.sortByNameEl.innerHTML = "文件名倒序";
-                break;
-        }
-        this.doQuickSearch();
-    }
-
-    toggleSortMineFirst() {
-        this.quickSearchEl.value = this.username;
+        this.updateTopOperations();
         this.doQuickSearch();
     }
 }
@@ -959,13 +1151,13 @@ const loginPage = `
         <div class="info-pane-pairs">
             <div class="info-pane-label">用户名</div>
             <div class="info-pane-input">
-                <input id="username" class="controls info-pane-tags-input" value="">
+                <input onkeydown="return checkSlash(event.key)" id="username" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div class="info-pane-pairs">
             <div class="info-pane-label">密码</div>
             <div class="info-pane-input">
-                <input id="password" type="password" class="controls info-pane-tags-input" value="">
+                <input onkeydown="return checkSlash(event.key)" id="password" type="password" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div onclick="session.doLogin()" class="control-button controls with-icon control-button-row">
@@ -1152,7 +1344,14 @@ function getFileList(files) {
         }
 
         let selected = "";
-        if (session.lastSelectedID == f.id) {
+        if (session.multiSelect.length > 0) {
+            for (const ff of session.multiSelect) {
+                if (f.id == ff.id) {
+                    selected = "selected";
+                    break;
+                }
+            }
+        } else if (session.lastSelectedID == f.id) {
             selected = "selected";
         }
 
@@ -1291,6 +1490,46 @@ function getSize(b) {
     return (Math.round(s * 100.0) / 100.0) + unit[unitPtr];
 }
 
+function getMultiselect(selections) {
+    let baseTag = "";
+    if (session.username) {
+        baseTag = session.username;
+    }
+    return `
+    <h2 class="file-name-title">已选取 ${selections.length} 个文件</h2>
+    <div class="info-pane-operations-container">
+        <div class="file-operations">
+            <div onclick="session.doMultiDelete()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/bin.svg">
+                <div>删除文件</div>
+            </div>
+            <a onclick="session.doMultiDownload()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/disk.svg">
+                <div>下载文件</div>
+            </a>
+            <div onclick="session.doMultiUpdate()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/brick_go.svg">
+                <div>保存修改</div>
+            </div>
+        </div>
+    </div>
+    <div class="info-pane-operations">
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">标签</div>
+            <div class="info-pane-input">
+                <input onkeydown="return checkSlash(event.key)" id="tags-input" class="controls info-pane-tags-input" value="${baseTag}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">私有</div>
+            <div class="info-pane-checkbox">
+                <input class="controls" type="checkbox">
+            </div>
+        </div>
+    </div>
+    `;
+}
+
 window.checkSlash = (k) => {
     if (k == "/") {
         return false;
@@ -1302,6 +1541,7 @@ window.checkSlash = (k) => {
 window.onkeyup = (e) => {
     if (e.key == "/") {
         session.quickSearchEl.focus();
+        e.preventDefault();
         return true;
     }
     return false;

@@ -6,6 +6,8 @@
 
 oatpp::Object<ResponseDto> PenefilesService::create_user(const oatpp::Object<UserRegistrationDto> &dto)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     OATPP_ASSERT_HTTP(dto->password == dto->passwordAgain, Status::CODE_500, "Passwords does not match");
     OATPP_ASSERT_HTTP(dto->code->size() > 0, Status::CODE_500, "Must provide invitation code");
     auto code_result = database->select_code(dto->code);
@@ -58,6 +60,8 @@ std::string PenefilesService::generate_random_string(int n)
 
 oatpp::Object<ResponseDto> PenefilesService::login(const oatpp::Object<UserDto> &dto)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto result = database->login_user(dto->username, dto->password);
     auto res = ResponseDto::createShared();
 
@@ -77,6 +81,8 @@ oatpp::Object<ResponseDto> PenefilesService::login(const oatpp::Object<UserDto> 
 
 oatpp::Object<CodeDto> PenefilesService::make_code()
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     std::string code = generate_random_string();
     auto res = database->make_code(code);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
@@ -168,6 +174,8 @@ std::string PenefilesService::get_tag_by_filename(const std::string &path)
 
 oatpp::Object<ResponseDto> PenefilesService::create_file(const oatpp::Object<FileDto> &dto, std::vector<std::string> initial_tags)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->create_file(dto->filename, dto->realfile, dto->size);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
@@ -190,6 +198,8 @@ oatpp::Object<ResponseDto> PenefilesService::create_file(const oatpp::Object<Fil
 
 oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<AuthFileUpdateDto> &dto)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto user = select_user_by_session(dto->session);
     auto file = locate_file(dto->realfile);
     auto res = database->find_tags_of_file(file->id);
@@ -259,6 +269,8 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
 
 oatpp::Object<ResponseDto> PenefilesService::delete_file(const oatpp::Object<AuthFileInfoDto> &auth_file_info_dto)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     namespace fs = std::filesystem;
 
     auto user = select_user_by_session(auth_file_info_dto->session);
@@ -312,6 +324,8 @@ oatpp::Object<ResponseDto> PenefilesService::delete_file(const oatpp::Object<Aut
 
 oatpp::Object<ResponseDto> PenefilesService::tag_file(const oatpp::Object<FileTagDto> &dto)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->bind_tag_to_file(dto->fileid, dto->tag);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
@@ -323,6 +337,8 @@ oatpp::Object<ResponseDto> PenefilesService::tag_file(const oatpp::Object<FileTa
 
 oatpp::Object<ResponseDto> PenefilesService::untag_file(const oatpp::Object<FileTagDto> &dto)
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->unbind_tag_from_file(dto->fileid, dto->tag);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
@@ -334,6 +350,8 @@ oatpp::Object<ResponseDto> PenefilesService::untag_file(const oatpp::Object<File
 
 oatpp::Object<DataDto<oatpp::Object<FileDto> > > PenefilesService::list_files()
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->list_files();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files found");
@@ -349,6 +367,8 @@ oatpp::Object<DataDto<oatpp::Object<FileDto> > > PenefilesService::list_files()
 
 oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > PenefilesService::list_files_tags()
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->list_files_tags();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files & tags found");
@@ -364,6 +384,8 @@ oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > PenefilesService::list_files
 
 oatpp::Object<DataDto<oatpp::Object<TagDto> > > PenefilesService::list_tags()
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->list_tags();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No tags found");
@@ -379,6 +401,8 @@ oatpp::Object<DataDto<oatpp::Object<TagDto> > > PenefilesService::list_tags()
 
 oatpp::Object<DataDto<oatpp::Object<UserDto> > > PenefilesService::list_users()
 {
+    const std::lock_guard<std::mutex> guardian(mu);
+
     auto res = database->get_all_users();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No users found");
