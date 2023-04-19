@@ -24,6 +24,8 @@ export class Penefiles {
         this.currentUploadEntryEl = document.querySelector("#current-upload-entry");
         this.currentUploadEntryProgressEl = document.querySelector("#current-upload-entry-progress");
         this.uploadEntryRestEl = document.querySelector(".upload-entry-rest");
+        this.sortByDateEl = document.querySelector("#sort-by-date");
+        this.sortByNameEl = document.querySelector("#sort-by-name");
         this.multiSelect = [];
         this.API = "http://10.0.0.9:4243"
 
@@ -910,11 +912,37 @@ export class Penefiles {
 
     toggleSortByDate() {
         this.sortByDate = (this.sortByDate + 1) % 3;
+        switch (this.sortByDate) {
+            case 0:
+                this.sortByDateEl.innerHTML = "无日期排序";
+                break;
+
+            case 1:
+                this.sortByDateEl.innerHTML = "日期倒序";
+                break;
+
+            case 2:
+                this.sortByDateEl.innerHTML = "日期正序";
+                break;
+        }
         this.doQuickSearch();
     }
 
     toggleSortByName() {
         this.sortByName = (this.sortByName + 1) % 3;
+        switch (this.sortByName) {
+            case 0:
+                this.sortByNameEl.innerHTML = "无文件名排序";
+                break;
+
+            case 1:
+                this.sortByNameEl.innerHTML = "文件名正序";
+                break;
+
+            case 2:
+                this.sortByNameEl.innerHTML = "文件名倒序";
+                break;
+        }
         this.doQuickSearch();
     }
 
