@@ -11,13 +11,20 @@ export class Penefiles {
         // Element finders
         this.fileListEl = document.querySelector(".file-list");
         this.infoPaneEl = document.querySelector(".info-pane");
-        this.superPositionWindowEl = document.querySelector(".superposition-window");
+        this.superPositionInfoWindowEl = document.querySelector(".superposition-info-window");
+        this.superPositionFileQueueWindowEl = document.querySelector(".superposition-file-queue-window");
         this.loginTopControlEl = document.querySelector("#login-top-control");
         this.registerTopControlEl = document.querySelector("#register-top-control");
         this.infoTopControlEl = document.querySelector("#info-top-control");
         this.uploadFileEl = document.querySelector("#upload-file");
         this.downloadURLEl = document.querySelector("#download-url");
         this.quickSearchEl = document.querySelector("#quick-search");
+        this.progressBarEl = document.querySelector(".progress-bar");
+        this.progressBlockEl = document.querySelector(".progress-block");
+        this.currentUploadEntryEl = document.querySelector("#current-upload-entry");
+        this.currentUploadEntryProgressEl = document.querySelector("#current-upload-entry-progress");
+        this.uploadEntryRestEl = document.querySelector(".upload-entry-rest");
+        this.multiSelect = [];
         this.API = "http://10.0.0.9:4243"
 
         this.fileListEl.onscroll = (e) => {
@@ -27,9 +34,11 @@ export class Penefiles {
         // Variables
         this.session = null;
         this.username = "";
-        this.superPositionWindowShown = false;
+        this.superPositionInfoWindowShown = false;
         this.lastSelectedID = -1;
         this.fileListScrollTop = 0;
+        this.upload = null;
+        this.uploadQueue = [];
 
         // Data
         this.files = [];
@@ -48,7 +57,7 @@ export class Penefiles {
         localStorage.setItem("penefiles", JSON.stringify({
             session: this.session,
             username: this.username,
-            superPositionWindowShown: this.superPositionWindowShown,
+            superPositionInfoWindowShown: this.superPositionInfoWindowShown,
             files: this.files,
             tags: this.tags,
             filesTags: this.filesTags,
@@ -152,8 +161,8 @@ export class Penefiles {
         this.infoPaneEl.innerHTML = what;
     }
 
-    setSuperpositionWindowContent(what) {
-        this.superPositionWindowEl.innerHTML = what;
+    setSuperpositionInfoWindowContent(what) {
+        this.superPositionInfoWindowEl.innerHTML = what;
     }
 
     updateTopOperations() {
@@ -168,6 +177,94 @@ export class Penefiles {
         }
     }
 
+    uploadNextFile() {
+        if (this.uploadQueue.length == 0) {
+            return;
+        }
+        const entry = this.uploadQueue[0];
+        this.uploadQueue.splice(0, 1);
+
+        return new Promise((resolve, reject) => {
+
+            const ajax = new XMLHttpRequest();
+            ajax.upload.addEventListener("progress", (e) => {
+                let percentage = Math.round((e.loaded / e.total) * 10000.0) / 100.0;
+                this.progressBlockEl.style.width = percentage + "%";
+                this.currentUploadEntryProgressEl.style.width = percentage + "%";
+            }, false);
+            ajax.addEventListener("load", (e) => {
+                let json = {};
+                this.ajax = null;
+                try {
+                    json = JSON.parse(e.target.responseText);
+                } catch (e) {
+                    if (e.target.responseText) {
+                        let lines = e.target.responseText.split("\n");
+                        reject(lines[3].split("=")[1]);
+                        return;
+                    } else {
+                        reject("由于某些未知的原因，文件上传失败了。");
+                        return;
+                    }
+                }
+                if (json.status != 200) {
+                    reject(json.message);
+                    return;
+                }
+                this.doRefresh().then(() => {
+                    // If it's not hidden, list file
+                    if (!this.superPositionFileQueueWindowEl.classList.contains("hidden")) {
+                        const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
+                        if (f.length == 0) {
+                            this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
+                            return;
+                        }
+                        this.fileInfo(f[0].id);
+                    }
+                });
+                resolve();
+            }, false);
+            ajax.addEventListener("error", (e) => {
+                reject(e.toString());
+                this.ajax = null;
+            });
+            ajax.addEventListener("abort", (e) => {
+                reject("你已经终止文件上传。");
+                this.ajax = null;
+            });
+            ajax.open("POST", `${this.API}/files/upload`);
+            ajax.send(entry.data);
+            this.upload = ajax;
+        });
+
+        
+    }
+
+    uploadAllFiles() {
+        if (this.uploadQueue.length == 0) {
+            this.superPositionFileQueueWindowEl.classList.add("hidden");
+            return;
+        }
+        const thisFile = this.uploadQueue[0];
+        this.currentUploadEntryEl.innerHTML = thisFile.name;
+        this.currentUploadEntryProgressEl.innerHTML = thisFile.name;
+        this.currentUploadEntryProgressEl.style.width = "0";
+
+        // List queue 
+        let queue = "";
+        for (let i = 1; i < this.uploadQueue.length; i++) {
+            queue += `<div class="upload-entry">${this.uploadQueue[i].name}</div>`;
+        }
+        this.uploadEntryRestEl.innerHTML = queue;
+
+        this.uploadNextFile().then(() => {
+            this.uploadAllFiles();
+        }).catch(e => {
+            this.message(`错误：文件 ${thisFile.name} 无法上传。`, e.toString());
+            this.uploadAllFiles();
+        });
+    }
+
     doUpload() {
         if (this.uploadFileEl.length == 0) {
             return;
@@ -177,6 +274,9 @@ export class Penefiles {
                 <img src="assets/key.svg" class="icon-controls">
                 <div>登陆</div>
             </div> 才能上传文件。`);
+            return;
+        }
+        if (this.uploadFileEl.files.length == 0) {
             return;
         }
 
@@ -199,32 +299,45 @@ export class Penefiles {
                     <div>登陆</div>
                 </div> 。`;
         }).then(() => {
-            let data = new FormData();
-            data.append("session", this.session);
-            data.append("file", this.uploadFileEl.files[0]);
-            return fetch(`${this.API}/files/upload`, {
-                method: "POST",
-                body: data
-            });
-        }).then(res => {
-            return res.json();
-        }).then(json => {
-            if (json.status != 200) {
-                this.message("错误：文件上传失败。", json.message);    
-            } else {
-                this.doRefresh().then(() => {
-                    const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
-                    if (f.length == 0) {
-                        this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
-                        return;
-                    }
-                    this.fileInfo(f[0].id);
+            for (const f of this.uploadFileEl.files) {
+                let data = new FormData();
+                data.append("session", this.session);
+                data.append("file", f);
+
+                this.uploadQueue.push({
+                    data,
+                    name: f.name
                 });
             }
+            this.superPositionFileQueueWindowEl.classList.remove("hidden");
+            this.uploadAllFiles();
         }).catch(e => {
             this.message("错误：文件上传失败。", e.toString());
         });
+        
+        // (json => {
+        //     if (json.status != 200) {
+        //         this.message("错误：文件上传失败。", json.message);    
+        //     } else {
+        //         this.doRefresh().then(() => {
+        //             const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
+        //             if (f.length == 0) {
+        //                 this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
+        //                 return;
+        //             }
+        //             this.fileInfo(f[0].id);
+        //         });
+        //     }
+        // })
 
+    }
+
+    doDrop(e) {
+        this.fileListEl.classList.remove("drag-active");
+        let files = e.dataTransfer.files;
+        this.uploadFileEl.files = files;
+        this.doUpload();
+        return false;
     }
 
     doUpdate() {
@@ -320,6 +433,19 @@ export class Penefiles {
         }).catch(e => {
             this.message("错误：文件删除失败。", e.toString());
         });
+    }
+
+    doAbortUpload() {
+        if (this.upload != null) {
+            this.upload.abort();
+        }
+    }
+
+    doGlobalAbortUpload() {
+        if (this.upload != null) {
+            this.uploadQueue = [];
+            this.upload.abort();
+        }
     }
 
     doLogin() {
@@ -509,7 +635,7 @@ export class Penefiles {
         return this.fetchAll().then(() => {
             this.createDb();
             this.updateDb();
-            this.setFileListContent(getFileList(sql(session.queries.listFiles, {}, false)));
+            // this.setFileListContent(getFileList(sql(session.queries.listFiles, {}, false)));
             this.doQuickSearch();
         });
     }
@@ -661,8 +787,8 @@ export class Penefiles {
     }
 
     message(title, explanation) {
-        this.superPositionWindowShown = true;
-        this.setSuperpositionWindowContent(`
+        this.superPositionInfoWindowShown = true;
+        this.setSuperpositionInfoWindowContent(`
         <h2>${title}</h2>
         ${explanation}
         <div class="padding-top-5px"></div>
@@ -671,7 +797,7 @@ export class Penefiles {
             <div>好</div>
         </div>
         `);
-        this.superPositionWindowEl.classList.remove("hidden");
+        this.superPositionInfoWindowEl.classList.remove("hidden");
         this.dumpVariables();
     }
 
@@ -681,8 +807,8 @@ export class Penefiles {
     }
 
     closeMessage() {
-        this.superPositionWindowEl.classList.add("hidden");
-        this.superPositionWindowShown = false;
+        this.superPositionInfoWindowEl.classList.add("hidden");
+        this.superPositionInfoWindowShown = false;
         this.dumpVariables();
     }
 
@@ -691,8 +817,10 @@ export class Penefiles {
         this.dumpVariables();
     }
 
-    fileInfo(id) {
+    fileInfo(id, event) {
         const f = sql(this.queries.findFileById, { ":id": id }, true);
+        // TODO: multiselect.
+        
         if (f.length == 0) {
             this.message("错误：无法找到文件 " + id, "这个文件不存在于数据库中。可能是因为代码有漏洞或者数据库已经老了。尝试刷新，或者通知 42yeah.");
             this.lastSelectedID = -1;
@@ -722,6 +850,10 @@ export class Penefiles {
         }
         thisSelectedEntry.classList.add("selected");
         this.dumpVariables();
+    }
+    
+    hideUploads() {
+        this.superPositionFileQueueWindowEl.classList.add("hidden");
     }
 }
 
@@ -930,7 +1062,7 @@ function getFileList(files) {
         }
 
         ret += `
-        <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id})" class="file-entry controls ${selected}">
+        <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id}, event)" class="file-entry controls ${selected}">
             <div class="file-info">
                 <div class="file-name">
                     ${f.filename}
@@ -1078,4 +1210,14 @@ window.onkeyup = (e) => {
         return true;
     }
     return false;
+};
+
+window.dragOverHandler = (e) => {
+    session.fileListEl.classList.add("drag-active");
+    return false;
+};
+
+window.dragEndHandler = (e) => {
+    session.fileListEl.classList.remove("drag-active");
+    return true;
 };

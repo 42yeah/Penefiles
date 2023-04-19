@@ -48,7 +48,7 @@
         </div>
         <div class="container">
             <div class="files-pane">
-                <div class="file-list">
+                <div ondragleave="return window.dragEndHandler(event)" ondragover="return window.dragOverHandler(event)" ondrop="return session.doDrop(event)" class="file-list">
                 </div>
                 <div class="bottom-bar">
                     <input id="quick-search" onkeyup="session.doQuickSearch()" class="search-input controls" placeholder="按 / 快速访问。">
@@ -56,7 +56,7 @@
                         <div class="quick-notes controls">
                             <img src="assets/page_white_edit.svg" class="icon-controls">
                         </div>
-                        <input onchange="session.doUpload()" class="hidden" id="upload-file" type="file">
+                        <input onchange="session.doUpload()" class="hidden" id="upload-file" type="file" multiple>
                         <label for="upload-file" class="files-upload controls">
                             <img src="assets/add.svg" class="icon-controls">
                         </label>
@@ -70,8 +70,42 @@
             </div>
         </div>
     </div>
-    <div class="hidden superposition-window">
-        
+    <div class="superposition-window">
+        <div class="superposition-info-window hidden">
+
+        </div>
+        <div class="hidden superposition-file-queue-window">
+            <h3>上传队列</h3>
+            <div class="padding-top-5px"></div>
+            <div class="padding-top-5px"></div>
+            <div class="progress-bar">
+                <div class="progress-block"></div>
+            </div>
+            <div class="padding-top-5px"></div>
+            <div class="file-operations">
+                <div onclick="session.doAbortUpload()" class="control-button controls with-icon">
+                    <img src="assets/cancel.svg" class="icon-controls">
+                    <div>终止</div>
+                </div>
+                <div onclick="session.doGlobalAbortUpload()" class="control-button controls with-icon">
+                    <img src="assets/cancel.svg" class="icon-controls">
+                    <div>清除队列</div>
+                </div>
+                <div onclick="session.hideUploads()" class="control-button controls with-icon">
+                    <img src="assets/application_delete.svg" class="icon-controls">
+                    <div>隐藏</div>
+                </div>
+            </div>
+            <div class="padding-top-5px"></div>
+            <div class="upload-queue">
+                <div class="upload-entry first">
+                    <div id="current-upload-entry-progress" class="upload-entry-progress"></div>
+                    <span id="current-upload-entry"></span>
+                </div>
+                <!-- Rest of the upload entries -->
+                <div class="upload-entry-rest"></div>
+            </div>
+        </div>
     </div>
     <a target="_blank" href="#" id="download-url" class="hidden"></a>
     <script src="js/sqljs-wasm/sql-wasm.js"></script>

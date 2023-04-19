@@ -2,6 +2,7 @@
 #include <random>
 #include <sstream>
 #include <iostream>
+#include <filesystem>
 
 oatpp::Object<ResponseDto> PenefilesService::create_user(const oatpp::Object<UserRegistrationDto> &dto)
 {
@@ -258,6 +259,8 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
 
 oatpp::Object<ResponseDto> PenefilesService::delete_file(const oatpp::Object<AuthFileInfoDto> &auth_file_info_dto)
 {
+    namespace fs = std::filesystem;
+
     auto user = select_user_by_session(auth_file_info_dto->session);
     auto file = locate_file(auth_file_info_dto->realfile);
     auto res = database->find_tags_of_file(file->id);
@@ -285,6 +288,15 @@ oatpp::Object<ResponseDto> PenefilesService::delete_file(const oatpp::Object<Aut
     }
 
     OATPP_ASSERT_HTTP(should_delete, Status::CODE_500, "You do not own this file.");
+
+    // Delete the real file.
+    auto path = fs::path(file->realfile);
+    auto stat = fs::status(path);
+    if (fs::status_known(stat) && stat.type() != fs::file_type::not_found)
+    {
+        OATPP_LOGI("PENEfiles", "Deleting file %s...", path.c_str());
+        fs::remove(path);
+    }
 
     res = database->delete_file(file->id);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());

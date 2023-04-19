@@ -16,6 +16,13 @@ html {
     flex-direction: column;
 }
 
+@supports (-webkit-alt: "") {
+    .viewport {
+        min-height: -webkit-fill-available;
+        max-height: -webkit-fill-available;
+    }
+}
+
 .top-bar {
     border-bottom: 1px solid #aaa;
     padding: 5px;
@@ -28,8 +35,11 @@ html {
 
 .container {
     flex: 1;
-    display: grid;
-    grid-template-columns: 320px auto;
+    /* display: grid;
+    grid-template-columns: 320px auto; */
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     overflow-y: hidden;
 }
 
@@ -38,6 +48,8 @@ html {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    max-width: 320px;
+    min-width: 320px;
 }
 
 .file-list {
@@ -217,6 +229,7 @@ html {
     overflow-y: auto;
     overflow-x: hidden;
     box-shadow: -3px 0 3px #00000022;
+    flex: 1;
 }
 
 .big-image-preview {
@@ -329,10 +342,21 @@ html {
     position: absolute;
     right: 10px;
     bottom: 10px;
+}
+
+.superposition-info-window {
+    max-width: 300px;
+    background-color: white;
+    border: 1px solid #aaa;
+    padding: 5px;
+}
+
+.superposition-file-queue-window {
     border: 1px solid #aaa;
     background-color: white;
-    padding: 5px;
     max-width: 300px;
+    padding: 5px;
+    margin-bottom: 5px;
 }
 
 .hidden {
@@ -345,4 +369,69 @@ html {
 
 .gray {
     color: gray;
+}
+
+.progress-bar {
+    height: 1.5em;
+    border: 1px solid #009c24;
+    width: 100%;
+}
+
+@keyframes gradient {
+    0% {
+        background: #2feb5a;
+    }
+
+    50% {
+        background: #009c24;
+    }
+
+    100% {
+        background: #2feb5a;
+    }
+}
+
+.progress-block {
+    background: linear-gradient(0deg, #2feb5a, #009c24);
+    height: 100%;
+    display: inline-block;
+    animation: gradient 10s infinite;
+    transition: all 0.3s cubic-bezier(1, 0, 0, 1);
+}
+
+.drag-active {
+    background-color: #ccc;
+}
+
+.upload-queue {
+    border: 1px solid #aaa;
+}
+
+.upload-entry {
+    padding: 0 3px;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden
+}
+
+.upload-entry:nth-child(even) {
+    background-color: white;
+}
+
+.upload-entry:nth-child(odd):not(.first) {
+    background-color: #ccc;
+}
+
+.upload-entry-progress {
+    position: absolute;
+    height: 100%;
+    width: 0;
+    left: 0;
+    top: 0;
+    background-color: #009c24;
+    /* filter: invert(1); */
+    padding: 0 3px;
+    color: white;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(1, 0, 0, 1);
 }
