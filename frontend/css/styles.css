@@ -352,6 +352,7 @@ html {
     background-color: white;
     border: 1px solid #aaa;
     padding: 5px;
+    z-index: 1;
 }
 
 .superposition-file-queue-window {
@@ -360,6 +361,7 @@ html {
     max-width: 300px;
     padding: 5px;
     margin-bottom: 5px;
+    z-index: 1;
 }
 
 .padding-top-5px {

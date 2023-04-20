@@ -1,3 +1,5 @@
+import { API } from "./config.js";
+
 // 
 // The Penefiles state machine.
 // Can be saved & reloaded.
@@ -26,7 +28,6 @@ export class Penefiles {
         this.uploadEntryRestEl = document.querySelector(".upload-entry-rest");
         this.sortByDateEl = document.querySelector("#sort-by-date");
         this.sortByNameEl = document.querySelector("#sort-by-name");
-        this.API = "https://files.42yeah.is/api"
     
         this.fileListEl.onscroll = (e) => {
             this.fileListScrollTop = this.fileListEl.scrollTop;
@@ -52,8 +53,10 @@ export class Penefiles {
         this.users = [];
 
         // SQL database
-        this.createDb();
-
+        if (!this.loadDatabase()) {
+            this.createDb();
+        }
+        
         this.loadVariables();
         this.updateTopOperations();
     }
@@ -63,14 +66,47 @@ export class Penefiles {
             session: this.session,
             username: this.username,
             superPositionInfoWindowShown: this.superPositionInfoWindowShown,
-            files: this.files,
-            tags: this.tags,
-            filesTags: this.filesTags,
-            users: this.users,
             fileListScrollTop: this.fileListScrollTop,
             sortByName: this.sortByName,
             sortByDate: this.sortByDate
         }));
+    }
+
+    dumpDatabase() {
+        const u8 = this.db.export();
+        
+        let ret = "";
+        for (let i = 0; i < u8.length; i++) {
+            ret += String.fromCharCode(u8[i]);
+        }
+        localStorage.setItem("db", ret);
+
+        this.loadDatabase();
+    }
+
+    loadDatabase() {
+        let begin = new Date();
+
+        let str = localStorage.getItem("db");
+        if (!str) {
+            return false;
+        }
+        try {
+            let u8 = new Uint8Array(str.length);
+            for (let i = 0; i < u8.length; i++) {
+                u8[i] = str.charCodeAt(i);
+            }
+            this.db = new SQL.Database(u8);
+
+            let end = new Date();
+            this.generateQueries();
+
+            console.log("database load profile: ", (end - begin) / 1000.0, "s");
+            return true;
+        } catch (e) {
+            this.message("错误：无法加载数据库。", "本地的数据库可能已经被污染。请等待从服务器拉取最新的数据库。");
+            return false;
+        }
     }
 
     loadVariables() {
@@ -81,15 +117,8 @@ export class Penefiles {
         cached = JSON.parse(cached);
         this.session = cached["session"];
         this.username = cached["username"];
-        this.files = cached["files"];
-        this.tags = cached["tags"];
-        this.filesTags = cached["filesTags"];
-        this.users = cached["users"];
         this.sortByName = cached["sortByName"];
         this.sortByDate = cached["sortByDate"];
-
-        // Create database.
-        this.updateDb();
 
         // TODO: update file list content.
     }
@@ -99,10 +128,15 @@ export class Penefiles {
     //
     createDb() {
         this.db = new SQL.Database();
+        
         let dbExec = `CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, tags TEXT);
             CREATE TABLE files_tags (fileid INTEGER, tag TEXT, UNIQUE(fileid, tag));
             CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, realfile TEXT UNIQUE, created_at DEFAULT CURRENT_TIMESTAMP, modified_at DEFAULT CURRENT_TIMESTAMP, size INTEGER);`;
         this.db.run(dbExec);
+        this.generateQueries();
+    }
+
+    generateQueries() {
         this.queries = {
             createFile: this.db.prepare("INSERT INTO files (id, filename, realfile, created_at, modified_at, size) VALUES (:id, :filename, :realfile, :created_at, :modified_at, :size);"),
             listFiles: this.db.prepare("SELECT * FROM files;"),
@@ -124,7 +158,10 @@ export class Penefiles {
             findTagsOfFile: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id;"),
             findFileWithTags: this.db.prepare("SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query);"),
             findFileWithTagsSubQueries: {},
-            getFileFromRealfile: this.db.prepare("SELECT * FROM files WHERE realfile=:realfile")
+            getFileFromRealfile: this.db.prepare("SELECT * FROM files WHERE realfile=:realfile"),
+            deleteAllFiles: this.db.prepare("DELETE FROM files;"),
+            deleteAllUsers: this.db.prepare("DELETE FROM users;"),
+            deleteAllFilesTags: this.db.prepare("DELETE FROM files_tags;")
         };
 
         // generate subqueries
@@ -170,6 +207,10 @@ export class Penefiles {
     // The three major databases.
     //
     updateDb() {
+        sql(this.queries.deleteAllFiles, {}, true);
+        sql(this.queries.deleteAllUsers, {}, true);
+        sql(this.queries.deleteAllFilesTags, {}, true);
+
         for (const f of this.files) {
             const dict = {
                 ":id": f.id,
@@ -304,7 +345,7 @@ export class Penefiles {
                 reject("你已经终止文件上传。");
                 this.ajax = null;
             });
-            ajax.open("POST", `${this.API}/files/upload`);
+            ajax.open("POST", `${API}/files/upload`);
             ajax.send(entry.data);
             this.upload = ajax;
         });
@@ -352,7 +393,7 @@ export class Penefiles {
             return;
         }
 
-        fetch(`${this.API}/auth/preflight`, {
+        fetch(`${API}/auth/preflight`, {
             method: "POST",
             body: JSON.stringify({
                 session: this.session
@@ -453,7 +494,7 @@ export class Penefiles {
             this.message("错误：无法找到要删除的文件。", "PENEfiles 状态机估计出了某些问题。");
             return;
         }
-        return fetch(`${this.API}/files/delete`, {
+        return fetch(`${API}/files/delete`, {
             method: "POST",
             body: JSON.stringify({
                 realfile: f[0].realfile.split("/")[1],
@@ -505,7 +546,7 @@ export class Penefiles {
         this.username = username;
 
         let resp = null;
-        fetch(`${this.API}/users/login`, {
+        fetch(`${API}/users/login`, {
             method: "POST",
             body: JSON.stringify({
                 username: username,
@@ -546,7 +587,7 @@ export class Penefiles {
         const password = this.passwordEl.value;
 
         let resp = null;
-        fetch(`${this.API}/users/register`, {
+        fetch(`${API}/users/register`, {
             method: "POST",
             body: JSON.stringify({
                 username: username,
@@ -633,7 +674,7 @@ export class Penefiles {
 
     // TODO TODO
     updateOne(req) {
-        return fetch(`${this.API}/files/update`, {
+        return fetch(`${API}/files/update`, {
             method: "POST",
             body: JSON.stringify(req)
         }).then(res => {
@@ -663,7 +704,7 @@ export class Penefiles {
         return new Promise((resolve, reject) => {
             let allFour = 0;
 
-            fetch(`${this.API}/files`, {
+            fetch(`${API}/files`, {
                 method: "GET"
             }).then(res => {
                 return res.json();
@@ -678,7 +719,7 @@ export class Penefiles {
                 this.message("错误：无法拉取文件列表。", e.toString());
                 reject(e);
             });
-            fetch(`${this.API}/tags`, {
+            fetch(`${API}/tags`, {
                 method: "GET"
             }).then(res => {
                 return res.json();
@@ -693,7 +734,7 @@ export class Penefiles {
                 this.message("错误：无法拉取标签列表。", e.toString());
                 reject(e);
             });
-            fetch(`${this.API}/users`, {
+            fetch(`${API}/users`, {
                 method: "GET"
             }).then(res => {
                 return res.json();
@@ -708,7 +749,7 @@ export class Penefiles {
                 this.message("错误：无法拉取标签列表。", e.toString());
                 reject(e);
             });
-            fetch(`${this.API}/files-tags`, {
+            fetch(`${API}/files-tags`, {
                 method: "GET"
             }).then(res => {
                 return res.json();
@@ -729,8 +770,8 @@ export class Penefiles {
 
     doRefresh() {
         return this.fetchAll().then(() => {
-            this.createDb();
             this.updateDb();
+            this.dumpDatabase();
             // this.setFileListContent(getFileList(sql(session.queries.listFiles, {}, false)));
             this.doQuickSearch();
         });
@@ -765,7 +806,7 @@ export class Penefiles {
     doMultiDownload() {
         for (let i = 0; i < this.multiSelect.length; i++) {
             const f = this.multiSelect[i];
-            this.downloadURLEl.setAttribute("href", `${this.API}/${f.realfile}/${f.filename}`);
+            this.downloadURLEl.setAttribute("href", `${API}/${f.realfile}/${f.filename}`);
             this.downloadURLEl.click();
         }
     }
@@ -805,7 +846,7 @@ export class Penefiles {
     }
 
     testGet() {
-        fetch(`${this.API}/`, {
+        fetch(`${API}/`, {
             method: "GET",
         }).then(res => {
             return res.json();
@@ -815,7 +856,7 @@ export class Penefiles {
     }
 
     testRegister() {
-        fetch(`${this.API}/users/register`, {
+        fetch(`${API}/users/register`, {
             method: "POST",
             body: JSON.stringify({
                 username: "dummy_account",
@@ -831,7 +872,7 @@ export class Penefiles {
     }
 
     testMakeCode() {
-        fetch(`${this.API}/codes/make`, {
+        fetch(`${API}/codes/make`, {
             method: "GET"
         }).then(res => {
             return res.json();
@@ -842,7 +883,7 @@ export class Penefiles {
     }
 
     testLogin() {
-        fetch(`${this.API}/users/login`, {
+        fetch(`${API}/users/login`, {
             method: "POST",
             body: JSON.stringify({
                 username: "dummy_account",
@@ -857,7 +898,7 @@ export class Penefiles {
     }
 
     testBadLogin() {
-        fetch(`${this.API}/users/login`, {
+        fetch(`${API}/users/login`, {
             method: "POST",
             body: JSON.stringify({
                 username: "dummy_account",
@@ -874,7 +915,7 @@ export class Penefiles {
         let data = new FormData();
         data.append("session", this.testInputEl.value);
         data.append("file", this.testFileEl.files[0]);
-        fetch(`${this.API}/files/upload`, {
+        fetch(`${API}/files/upload`, {
             method: "POST",
             body: data
         }).then(res => {
@@ -886,11 +927,12 @@ export class Penefiles {
 
     testClearCached() {
         localStorage.setItem("penefiles", "");
+        localStorage.setItem("db", "");
     }
 
     testPreflight() {
         let fakeSession = this.testInputEl.value;
-        fetch(`${this.API}/auth/preflight`, {
+        fetch(`${API}/auth/preflight`, {
             method: "POST",
             body: JSON.stringify({
                 session: fakeSession
@@ -1116,7 +1158,7 @@ export class Penefiles {
                 lastSelectedEl.classList.remove("selected");
             }
             if (this.lastSelectedID == f[0].id) {
-                this.downloadURLEl.setAttribute("href", `${this.API}/${f[0].realfile}/${f[0].filename}`);
+                this.downloadURLEl.setAttribute("href", `${API}/${f[0].realfile}/${f[0].filename}`);
                 this.downloadURLEl.click();
             }
         }
@@ -1260,6 +1302,14 @@ const testsPage = `
             <div onclick="session.testAQE()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
                 <div>任意查询</div>
+            </div>
+            <div onclick="session.dumpDatabase()" class="control-button controls with-icon control-button-tight">
+                <img src="assets/bug_go.svg" class="icon-controls">
+                <div>测试保存数据库</div>
+            </div>
+            <div onclick="session.loadDatabase()" class="control-button controls with-icon control-button-tight">
+                <img src="assets/bug_go.svg" class="icon-controls">
+                <div>测试加载数据库</div>
             </div>
         </div>
     </div>

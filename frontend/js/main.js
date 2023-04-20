@@ -6,6 +6,7 @@ window.SQL = await initSqlJs({
 });
 
 window.session = new Penefiles();
+window.session.doQuickSearch();
 window.session.doRefresh().then(() => {
 
 });
