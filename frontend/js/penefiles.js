@@ -1450,14 +1450,14 @@ function getFileInfo(f) {
     if (hasImage.length > 0) {
         preview += `
         <div class="big-image-preview">
-            <img src="${session.API}/${f.realfile}/${f.filename}">
+            <img src="${API}/${f.realfile}/${f.filename}">
         </div>`;
     }
     if (hasVideo.length > 0) {
         preview += `
         <div class="big-image-preview">
             <video controls>
-                <source src="${session.API}/${f.realfile}/${f.filename}">
+                <source src="${API}/${f.realfile}/${f.filename}">
                 你的浏览器也许不支持视频播放。
             </video>
         </div>`;
@@ -1466,7 +1466,7 @@ function getFileInfo(f) {
         preview += `
         <div class="big-image-preview">
             <audio controls>
-                <source src="${session.API}/${f.realfile}/${f.filename}">
+                <source src="${API}/${f.realfile}/${f.filename}">
                 你的浏览器也许不支持视频播放。
             </audio>
         </div>`;
@@ -1480,7 +1480,7 @@ function getFileInfo(f) {
                 <img class="icon-controls" src="assets/bin.svg">
                 <div>删除文件</div>
             </div>
-            <a href="${session.API}/${f.realfile}/${f.filename}" class="control-button with-icon controls">
+            <a href="${API}/${f.realfile}/${f.filename}" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/disk.svg">
                 <div>下载文件</div>
             </a>
