@@ -1,4 +1,4 @@
-const cacheName = "penefiles-cache-v7";
+const cacheName = "penefiles-cache-v29";
 
 const resourcesToCache = [
     "/",

@@ -970,6 +970,14 @@ export class Penefiles {
         stmt.free();
     }
 
+    async testStopServiceWorkers() {
+        let workers = await navigator.serviceWorker.getRegistrations();
+        for (const w of workers) {
+            console.log("Unregistering", w);
+            w.unregister();
+        }
+    }
+
     // UIs
     login() {
         this.setInfoPaneContent(loginPage);
@@ -1310,6 +1318,10 @@ const testsPage = `
             <div onclick="session.loadDatabase()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
                 <div>测试加载数据库</div>
+            </div>
+            <div onclick="session.testStopServiceWorkers()" class="control-button controls with-icon control-button-tight">
+                <img src="assets/bug_go.svg" class="icon-controls">
+                <div>停止所有 ServiceWorker</div>
             </div>
         </div>
     </div>

@@ -14,7 +14,9 @@ window.session.doRefresh().then(() => {
 // Register service worker
 //
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/serviceWorker.js").then(registration => {
+    navigator.serviceWorker.register("/serviceWorker.js", {
+        scope: "/"
+    }).then(registration => {
         console.log("ServiceWorker registered with scope: ", registration.scope);
         registration.addEventListener("updatefound", () => {
             window.session.message("PENEfiles 更新了。", "请刷新页面，享用最新版本的 PENEfiles。");
