@@ -7,7 +7,10 @@ set(PENEFILES_SRC
 find_package(oatpp 1.3.0 REQUIRED)
 find_package(oatpp-sqlite 1.3.0 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(SQLite3)
+
+if(NOT DONT_LINK_SQLITE)
+    find_package(SQLite3)
+endif()
 
 add_executable(penefiles ${PENEFILES_SRC})
 
