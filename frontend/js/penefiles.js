@@ -350,7 +350,7 @@ export class Penefiles {
             this.upload = ajax;
         });
 
-        
+
     }
 
     uploadAllFiles() {
