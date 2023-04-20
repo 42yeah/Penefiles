@@ -21,6 +21,7 @@ target_link_libraries(penefiles PUBLIC
     uuid)
 
 if(USE_EXPERIMENTAL_FILESYSTEM)
+    target_compile_definitions(penefiles PRIVATE USE_EXPERIMENTAL_FILESYSTEM)
     target_link_libraries(penefiles PUBLIC stdc++fs)
 endif()
 
