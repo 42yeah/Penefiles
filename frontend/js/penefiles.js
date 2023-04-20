@@ -26,8 +26,8 @@ export class Penefiles {
         this.uploadEntryRestEl = document.querySelector(".upload-entry-rest");
         this.sortByDateEl = document.querySelector("#sort-by-date");
         this.sortByNameEl = document.querySelector("#sort-by-name");
-        this.API = "http://127.0.0.1:4243"
-
+        this.API = "https://files.42yeah.is/api"
+    
         this.fileListEl.onscroll = (e) => {
             this.fileListScrollTop = this.fileListEl.scrollTop;
         }

@@ -6,13 +6,15 @@ set(PENEFILES_SRC
 
 find_package(oatpp 1.3.0 REQUIRED)
 find_package(oatpp-sqlite 1.3.0 REQUIRED)
-find_package(SQLite3 REQUIRED)
+find_package(Threads REQUIRED)
+# find_package(SQLite3 REQUIRED)
 
 add_executable(penefiles ${PENEFILES_SRC})
 
 target_link_libraries(penefiles PUBLIC 
     oatpp::oatpp 
     oatpp::oatpp-sqlite
+    stdc++fs
     uuid)
 
 target_include_directories(penefiles PUBLIC 

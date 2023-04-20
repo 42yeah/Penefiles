@@ -14,7 +14,7 @@ class AppComponent
 {
 public:
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ServerConnectionProvider>, server_connection_provider)([] {
-        return oatpp::network::tcp::server::ConnectionProvider::createShared({ "0.0.0.0", 4243, oatpp::network::Address::IP_4 });
+        return oatpp::network::tcp::server::ConnectionProvider::createShared({ "127.0.0.1", 4243, oatpp::network::Address::IP_4 });
     }());
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, http_router)([] {
