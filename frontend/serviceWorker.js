@@ -1,4 +1,4 @@
-const cacheName = "penefiles-cache";
+const cacheName = "penefiles-cache-v5";
 const hostName = "http://127.0.0.1:4242";
 
 const resourcesToCache = [
@@ -28,10 +28,27 @@ const resourcesToCache = [
     "/assets/textfield_rename.svg",
 ];
 
+const deleteCache = async (key) => {
+    console.log("Removing old cache ", key);
+    await caches.delete(key);
+};
+
+const deleteOldCaches = async () => {
+    const keepList = [cacheName];
+    const keyList = await caches.keys();
+    const toDelete = keyList.filter(key => {
+        return !keepList.includes(key)
+    });
+    await Promise.all(toDelete.map(deleteCache));
+}
+
 self.addEventListener("install", e => {
-    e.waitUntil(caches.open(cacheName).then(cache => {
+    e.waitUntil(caches.open(cacheName).then(async cache => {
+        await deleteOldCaches();
         return cache.addAll(resourcesToCache);
     }));
+    updated = true;
+    console.log("PENEfiles frontend cache", cacheName, "is installed");
 });
 
 self.addEventListener("fetch", e => {
