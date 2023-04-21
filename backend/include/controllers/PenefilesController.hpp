@@ -115,6 +115,7 @@ public:
 
         auto outgoing_response = OutgoingResponse::createShared(Status::CODE_200, body);
         outgoing_response->putHeader("Content-Length", std::to_string(file->size));
+        outgoing_response->putHeader("Content-Disposition", std::string("attachment; filename=\"" + filename + "\""));
 
         return outgoing_response;
     }
