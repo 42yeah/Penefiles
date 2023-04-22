@@ -115,8 +115,8 @@ public:
 
         auto outgoing_response = OutgoingResponse::createShared(Status::CODE_200, body);
         outgoing_response->putHeader("Content-Length", std::to_string(file->size));
-        outgoing_response->putHeader("Content-Disposition", std::string("attachment; filename=\"" + file->filename + "\""));
-        outgoing_response->putHeader("Content-Type", "application/octet-stream");
+        // outgoing_response->putHeader("Content-Disposition", std::string("attachment; filename=\"" + file->filename + "\""));
+        // outgoing_response->putHeader("Content-Type", "application/octet-stream");
 
         return outgoing_response;
     }
