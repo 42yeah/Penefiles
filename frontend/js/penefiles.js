@@ -1069,9 +1069,13 @@ export class Penefiles {
                     this.multiSelect.push(this.presentedFiles[i]);
                     document.querySelector("#file-entry-" + this.presentedFiles[i].id).classList.add("selected");
                 }
+
                 this.setInfoPaneContent(getMultiselect(this.multiSelect));
                 this.tagsInputEl = document.querySelector("#tags-input");
-                this.tagsInputEl.focus();
+                if (window.innerWidth < 645) {
+                    this.tagsInputEl.focus();    
+                }
+                
                 this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
                 this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
                 
