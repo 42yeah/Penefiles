@@ -642,19 +642,44 @@ export class Penefiles {
         let subQueries = query.split(" ");
         let aggregate = {};
         let weight = 1;
+        let symbol = "";
 
-        for (const sub of subQueries) {
+        for (let sub of subQueries) {
+            // AND operation - the current aggregate MUST contain the following
+            if (sub.startsWith("+") || sub.startsWith("-")) {
+                symbol = sub[0];
+                sub = sub.substr(1);
+            }
             const things = sql(this.queries.findFileWithTagsSubQueries[this.sortByDate * 10 + this.sortByName], { ":query": `%${sub}%` }, false);
             
-            for (const t of things) {
-                if (aggregate[t.id]) {
-                    aggregate[t.id].count += weight;
-                    continue;
+            if (symbol == "") {
+                for (const t of things) {
+                    if (aggregate[t.id]) {
+                        aggregate[t.id].count += weight;
+                        continue;
+                    }
+                    aggregate[t.id] = t;
+                    aggregate[t.id].count = weight;
+                    weight -= 0.001;
                 }
-                aggregate[t.id] = t;
-                aggregate[t.id].count = weight;
-                weight -= 0.01;
+            } else if (symbol == "+") {
+                for (const k in aggregate) {
+                    if (!things.find(t => {
+                        return t.id == k;
+                    })) {
+                        delete aggregate[k];
+                    }
+                }
+            } else if (symbol == "-") {
+                for (const k in aggregate) {
+                    if (things.find(t => {
+                        return t.id == k;
+                    })) {
+                        delete aggregate[k];
+                    }
+                }
             }
+            
             weight *= 0.5;
         }
 
