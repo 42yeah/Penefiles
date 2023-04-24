@@ -121,6 +121,8 @@ html {
 .file-name {
     padding-top: 5px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .file-name-title {
@@ -439,6 +441,14 @@ html {
 
 .hidden {
     display: none !important;
+}
+
+.inactive {
+    filter: saturate(0%);
+}
+
+.invert {
+    transform: rotate(180deg);
 }
 
 @media screen and (max-width: 645px) {

@@ -16,13 +16,17 @@
                     <img class="icon-controls" src="assets/lightning.svg">
                     <div>刷新</div>
                 </div>
-                <div onclick="session.toggleSortByDate()" class="control-button controls with-icon">
+                <div onclick="session.toggleSortByDate()" class="inactive control-button controls with-icon">
                     <img class="icon-controls" src="assets/date.svg">
                     <div id="sort-by-date">无日期排序</div>
                 </div>
-                <div onclick="session.toggleSortByName()" class="control-button controls with-icon">
+                <div onclick="session.toggleSortByName()" class="inactive control-button controls with-icon">
                     <img class="icon-controls" src="assets/textfield_rename.svg">
                     <div id="sort-by-name">无文件名排序</div>
+                </div>
+                <div id="info-top-control" onclick="session.toggleOnlyShowMine()" class="inactive control-button controls with-icon">
+                    <img class="icon-controls" src="assets/status_online.svg">
+                    <div id="only-show-mine">只显示我的</div>
                 </div>
                 <div id="register-top-control" onclick="session.register()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/asterisk_yellow.svg">
@@ -37,7 +41,7 @@
                     <div>调试</div>
                 </div>
                 <div id="info-top-control" onclick="session.personalInfo()" class="control-button controls with-icon">
-                    <img class="icon-controls" src="assets/status_online.svg">
+                    <img class="icon-controls" src="assets/house.svg">
                     <div>用户信息</div>
                 </div>
             </div>

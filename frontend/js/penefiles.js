@@ -28,6 +28,7 @@ export class Penefiles {
         this.uploadEntryRestEl = document.querySelector(".upload-entry-rest");
         this.sortByDateEl = document.querySelector("#sort-by-date");
         this.sortByNameEl = document.querySelector("#sort-by-name");
+        this.onlyShowMineEl = document.querySelector("#only-show-mine");
     
         this.fileListEl.onscroll = (e) => {
             this.fileListScrollTop = this.fileListEl.scrollTop;
@@ -45,6 +46,7 @@ export class Penefiles {
         this.presentedFiles = [];
         this.sortByDate = 0;
         this.sortByName = 0;
+        this.onlyShowMine = 0;
 
         // Data
         this.files = [];
@@ -68,7 +70,8 @@ export class Penefiles {
             superPositionInfoWindowShown: this.superPositionInfoWindowShown,
             fileListScrollTop: this.fileListScrollTop,
             sortByName: this.sortByName,
-            sortByDate: this.sortByDate
+            sortByDate: this.sortByDate,
+            onlyShowMine: this.onlyShowMine
         }));
     }
 
@@ -109,16 +112,24 @@ export class Penefiles {
         }
     }
 
+    cachedOrDefault(dict, key, defa) {
+        if (!(key in dict)) {
+            return defa;
+        }
+        return dict[key];
+    }
+
     loadVariables() {
         let cached = localStorage.getItem("penefiles");
         if (!cached || cached == "") {
             return;
         }
         cached = JSON.parse(cached);
-        this.session = cached["session"];
-        this.username = cached["username"];
-        this.sortByName = cached["sortByName"];
-        this.sortByDate = cached["sortByDate"];
+        this.session = this.cachedOrDefault(cached, "session", null);
+        this.username = this.cachedOrDefault(cached, "username", null);
+        this.sortByName = this.cachedOrDefault(cached, "sortByName", 0);
+        this.sortByDate = this.cachedOrDefault(cached, "sortByDate", 0);
+        this.onlyShowMine = this.cachedOrDefault(cached, "onlyShowMine", 0);
 
         // TODO: update file list content.
     }
@@ -167,37 +178,47 @@ export class Penefiles {
         // generate subqueries
         for (let sortByDate = 0; sortByDate < 3; sortByDate++) {
             for (let sortByName = 0; sortByName < 3; sortByName++) {
-                if (sortByDate == 0 && sortByName == 0) {
-                    this.queries.subQueries[sortByDate * 10 + sortByName] = this.db.prepare("SELECT * FROM files;");
-                    this.queries.findFileWithTagsSubQueries[sortByDate * 10 + sortByName] = this.db.prepare("SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query);")
-                    continue;
-                }
+                for (let onlyShowMine = 0; onlyShowMine < 2; onlyShowMine++) {
+                    if (sortByDate == 0 && sortByName == 0) {
+                        let s = "SELECT * FROM files;";
+                        let ss = "SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query)";
+                        if (onlyShowMine == 1) {
+                            s = "SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND tag=:user;";
+                        }
+                        this.queries.subQueries[sortByDate * 100 + sortByName * 10 + onlyShowMine] = this.db.prepare(s);
+                        this.queries.findFileWithTagsSubQueries[sortByDate * 100 + sortByName * 10 + onlyShowMine] = this.db.prepare(ss);
+                        continue;
+                    }
 
-                let s = "SELECT * FROM files ORDER BY ";
-                let ss = "SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query) ORDER BY ";
-                
-                if (sortByDate == 1) {
-                    s += "modified_at DESC ";
-                    ss += "modified_at DESC ";
-                } else if (sortByDate == 2) {
-                    s += "modified_at ASC ";
-                    ss += "modified_at ASC ";
+                    let s = "SELECT * FROM files ORDER BY ";
+                    let ss = "SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query) ORDER BY ";
+                    if (onlyShowMine == 1) {
+                        s = "SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND tag=:user ORDER BY ";
+                    }
+                    
+                    if (sortByDate == 1) {
+                        s += "modified_at DESC ";
+                        ss += "modified_at DESC ";
+                    } else if (sortByDate == 2) {
+                        s += "modified_at ASC ";
+                        ss += "modified_at ASC ";
+                    }
+                    if (sortByDate != 0 && sortByName != 0) {
+                        s += ", ";
+                        ss += ", ";
+                    }
+                    if (sortByName == 1) {
+                        s += "filename ASC ";
+                        ss += "filename ASC ";
+                    } else if (sortByName == 2) {
+                        s += "filename DESC ";
+                        ss += "filename DESC ";
+                    }
+                    s += ";";
+                    ss += ";";
+                    this.queries.subQueries[sortByDate * 100 + sortByName * 10 + onlyShowMine] = this.db.prepare(s);
+                    this.queries.findFileWithTagsSubQueries[sortByDate * 100 + sortByName * 10 + onlyShowMine] = this.db.prepare(ss);
                 }
-                if (sortByDate != 0 && sortByName != 0) {
-                    s += ", ";
-                    ss += ", ";
-                }
-                if (sortByName == 1) {
-                    s += "filename ASC ";
-                    ss += "filename ASC ";
-                } else if (sortByName == 2) {
-                    s += "filename DESC ";
-                    ss += "filename DESC ";
-                }
-                s += ";";
-                ss += ";";
-                this.queries.subQueries[sortByDate * 10 + sortByName] = this.db.prepare(s);
-                this.queries.findFileWithTagsSubQueries[sortByDate * 10 + sortByName] = this.db.prepare(ss);
             }
         }
     }
@@ -257,35 +278,61 @@ export class Penefiles {
             this.loginTopControlEl.classList.remove("hidden");
             this.registerTopControlEl.classList.remove("hidden");
             this.infoTopControlEl.classList.add("hidden");
+            this.onlyShowMineEl.classList.remove("hidden");
         } else {
             this.loginTopControlEl.classList.add("hidden");
             this.registerTopControlEl.classList.add("hidden");
             this.infoTopControlEl.classList.remove("hidden");
+            this.onlyShowMineEl.classList.add("hidden");
         }
         switch (this.sortByDate) {
             case 0:
                 this.sortByDateEl.innerHTML = "无日期排序";
+                this.sortByDateEl.parentElement.classList.add("inactive");
+                this.sortByDateEl.previousElementSibling.classList.remove("invert");
                 break;
 
             case 1:
                 this.sortByDateEl.innerHTML = "日期倒序";
+                this.sortByDateEl.parentElement.classList.remove("inactive");
+                this.sortByDateEl.previousElementSibling.classList.add("invert");
                 break;
 
             case 2:
                 this.sortByDateEl.innerHTML = "日期正序";
+                this.sortByDateEl.parentElement.classList.remove("inactive");
+                this.sortByDateEl.previousElementSibling.classList.remove("invert");
                 break;
         }
         switch (this.sortByName) {
             case 0:
                 this.sortByNameEl.innerHTML = "无文件名排序";
+                this.sortByNameEl.parentElement.classList.add("inactive");
+                this.sortByNameEl.previousElementSibling.classList.remove("invert");
                 break;
 
             case 1:
                 this.sortByNameEl.innerHTML = "文件名正序";
+                this.sortByNameEl.parentElement.classList.remove("inactive");
+                this.sortByNameEl.previousElementSibling.classList.remove("invert");
                 break;
 
             case 2:
                 this.sortByNameEl.innerHTML = "文件名倒序";
+                this.sortByNameEl.parentElement.classList.remove("inactive");
+                this.sortByNameEl.previousElementSibling.classList.add("invert");
+                break;
+        }
+
+        switch (this.onlyShowMine) {
+            case 0:
+                this.onlyShowMineEl.innerHTML = "显示所有人的";
+                this.onlyShowMineEl.parentElement.classList.add("inactive");
+                break;
+
+            case 1:
+                this.onlyShowMineEl.innerHTML = "只显示我的";
+                this.onlyShowMineEl.parentElement.classList.remove("inactive");
                 break;
         }
     }
@@ -376,6 +423,29 @@ export class Penefiles {
             this.message(`错误：文件 ${thisFile.name} 无法上传。`, e.toString());
             this.uploadAllFiles();
         });
+    }
+
+    doShare() {
+        if (this.lastSelectedID < 0) {
+            return;
+        }
+        const f = sql(this.queries.findFileById, { ":id": this.lastSelectedID }, true);
+        if (f.length == 0) {
+            this.message("错误：无法分享该文件。", "该文件已经不存在于数据库中。你也许需要刷新。");
+            return;
+        }
+        if ("share" in navigator) {
+            navigator.share({
+                title: `${f[0].filename} | PENEfiles`,
+                text: `${this.username} 正在使用 PENEfiles 和你分享 ${f[0].filename}。`,
+                url: `${API}/${f[0].realfile}/${f[0].filename}`
+            });
+        } else {
+            this.fileUrlEl.select();
+            this.fileUrlEl.setSelectionRange(0, this.fileUrlEl.value.length + 1);
+            navigator.clipboard.writeText(this.fileUrlEl.value);
+            this.message("链接已经复制到你的剪贴板。", "由于你的浏览器不支持分享功能，链接已经复制到了你的剪贴板中。");
+        }
     }
 
     doUpload() {
@@ -561,7 +631,10 @@ export class Penefiles {
                 if (json.status == 200) {
                     this.message("登陆成功", "你已经成功登陆。");
                     this.session = json.message;
+                    this.onlyShowMine = 1;
                     this.personalInfo();
+                    this.doQuickSearch();
+                    this.updateTopOperations();
                 }
             } catch (e) {
                 const lines = text.split("\n");
@@ -577,9 +650,11 @@ export class Penefiles {
     doLogout() {
         this.message("登出成功", "你已成功退出登录。");
         this.session = null;
+        this.onlyShowMine = false;
         this.updateTopOperations();
         this.dumpVariables();
         this.login();
+        this.doQuickSearch();
     }
 
     doRegister() {
@@ -632,7 +707,9 @@ export class Penefiles {
 
         let query = this.quickSearchEl.value;
         if (query == "") {
-            const files = sql(this.queries.subQueries[this.sortByDate * 10 + this.sortByName], {}, false)
+            const files = sql(this.queries.subQueries[this.sortByDate * 100 + this.sortByName * 10 + this.onlyShowMine], {
+                ":user": this.username
+            }, false);
             this.presentedFiles = files;
             this.setFileListContent(getFileList(files));
             return;
@@ -643,6 +720,9 @@ export class Penefiles {
         let aggregate = {};
         let weight = 1;
         let symbol = "";
+        if (this.onlyShowMine) {
+            subQueries.push(`+${this.username}`);
+        }
 
         for (let sub of subQueries) {
             // AND operation - the current aggregate MUST contain the following
@@ -650,7 +730,9 @@ export class Penefiles {
                 symbol = sub[0];
                 sub = sub.substr(1);
             }
-            const things = sql(this.queries.findFileWithTagsSubQueries[this.sortByDate * 10 + this.sortByName], { ":query": `%${sub}%` }, false);
+            const things = sql(this.queries.findFileWithTagsSubQueries[this.sortByDate * 100 + this.sortByName * 10 + this.onlyShowMine], {
+                ":query": `%${sub}%`
+            }, false);
             
             if (symbol == "") {
                 for (const t of things) {
@@ -1184,6 +1266,7 @@ export class Penefiles {
         this.setInfoPaneContent(getFileInfo(f[0]));
         this.fileNameInputEl = document.querySelector("#file-name-input");
         this.tagsInputEl = document.querySelector("#tags-input");
+        this.fileUrlEl = document.querySelector("#file-url");
 
         if (window.innerWidth > 645) {
             this.tagsInputEl.focus();
@@ -1216,12 +1299,21 @@ export class Penefiles {
         this.sortByDate = (this.sortByDate + 1) % 3;
         this.updateTopOperations();
         this.doQuickSearch();
+        this.dumpVariables();
     }
 
     toggleSortByName() {
         this.sortByName = (this.sortByName + 1) % 3;
         this.updateTopOperations();
         this.doQuickSearch();
+        this.dumpVariables();
+    }
+
+    toggleOnlyShowMine() {
+        this.onlyShowMine = (this.onlyShowMine + 1) % 2;
+        this.updateTopOperations();
+        this.doQuickSearch();
+        this.dumpVariables();
     }
 }
 
@@ -1527,9 +1619,14 @@ function getFileInfo(f) {
                 <img class="icon-controls" src="assets/disk.svg">
                 <div>下载文件</div>
             </a>
+            <input id="file-url" value="${encodeURI(API + "/" + f.realfile + "/" + f.filename)}" class="readonly hidden">
             <div onclick="session.doUpdate()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/brick_go.svg">
                 <div>保存修改</div>
+            </div>
+            <div onclick="session.doShare()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/link.svg">
+                <div>分享文件</div>
             </div>
         </div>
     </div>
