@@ -746,6 +746,8 @@ export class Penefiles {
                             continue;
                         }
                         aggregate[t.id].count += weight;
+                        weight -= 0.001;
+                        loopDict[t.id] = true;
                         continue;
                     }
                     aggregate[t.id] = t;
