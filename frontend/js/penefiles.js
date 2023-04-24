@@ -1073,7 +1073,7 @@ export class Penefiles {
                 this.setInfoPaneContent(getMultiselect(this.multiSelect));
                 this.tagsInputEl = document.querySelector("#tags-input");
                 if (window.innerWidth > 645) {
-                    this.tagsInputEl.focus();    
+                    this.tagsInputEl.focus();
                 }
                 
                 this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
@@ -1160,7 +1160,9 @@ export class Penefiles {
         this.fileNameInputEl = document.querySelector("#file-name-input");
         this.tagsInputEl = document.querySelector("#tags-input");
 
-        this.tagsInputEl.focus();
+        if (window.innerWidth > 645) {
+            this.tagsInputEl.focus();
+        }
         this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
         this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
 
