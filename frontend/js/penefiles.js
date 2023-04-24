@@ -1653,7 +1653,6 @@ function getFileInfo(f) {
             let currentPage = 1;
             let prevPageEl = document.querySelector("#prev-page");
             let nextPageEl = document.querySelector("#next-page");
-            console.log(pdf);
 
             function displayPage() {
                 pdf.getPage(currentPage).then(page => {
