@@ -1182,9 +1182,9 @@ export class Penefiles {
                 this.setInfoPaneContent(getMultiselect(this.multiSelect));
                 this.tagsInputEl = document.querySelector("#tags-input");
                 if (window.innerWidth > 645) {
-                    this.tagsInputEl.focus();
-                    this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
-                    this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
+                    // this.tagsInputEl.focus();
+                    // this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
+                    // this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
                 }
                 
                 return;    
@@ -1270,9 +1270,9 @@ export class Penefiles {
         this.fileUrlEl = document.querySelector("#file-url");
 
         if (window.innerWidth > 645) {
-            this.tagsInputEl.focus();
-            this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
-            this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
+            // this.tagsInputEl.focus();
+            // this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
+            // this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
         }
 
         if (this.lastSelectedID && this.lastSelectedID > 0) {
