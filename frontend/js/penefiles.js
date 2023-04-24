@@ -1592,6 +1592,7 @@ function getFileInfo(f) {
     }, true);
     const isDocx = f.filename.endsWith(".docx");
     const isPdf = f.filename.endsWith(".pdf");
+    const isTiff = f.filename.endsWith(".tif") || f.filename.endsWith(".tiff");
     
     let preview = "";
     if (hasImage.length > 0) {
@@ -1704,6 +1705,18 @@ function getFileInfo(f) {
             
             <canvas class="preview-canvas"></canvas>
         `;
+    }
+    if (isTiff) {
+        fetch(`${API}/${f.realfile}/${f.filename}`).then(res => {
+            return res.arrayBuffer();
+        }).then(ab => {
+            let src = UTIF.bufferToURI(ab);
+            document.querySelector(".big-image-preview").innerHTML = `
+                <img src="${src}">
+            `;
+        }).catch(e => {
+            session.message(`无法预览 ${f.filename}。`, e.toString());
+        });
     }
 
     return `
