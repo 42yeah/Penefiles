@@ -274,16 +274,17 @@ export class Penefiles {
     }
 
     updateTopOperations() {
+        
         if (this.session == null) {
             this.loginTopControlEl.classList.remove("hidden");
             this.registerTopControlEl.classList.remove("hidden");
             this.infoTopControlEl.classList.add("hidden");
-            this.onlyShowMineEl.classList.remove("hidden");
+            this.onlyShowMineEl.parentElement.classList.add("hidden");
         } else {
             this.loginTopControlEl.classList.add("hidden");
             this.registerTopControlEl.classList.add("hidden");
             this.infoTopControlEl.classList.remove("hidden");
-            this.onlyShowMineEl.classList.add("hidden");
+            this.onlyShowMineEl.parentElement.classList.remove("hidden");
         }
         switch (this.sortByDate) {
             case 0:
