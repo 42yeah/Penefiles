@@ -1072,7 +1072,7 @@ export class Penefiles {
 
                 this.setInfoPaneContent(getMultiselect(this.multiSelect));
                 this.tagsInputEl = document.querySelector("#tags-input");
-                if (window.innerWidth < 645) {
+                if (window.innerWidth > 645) {
                     this.tagsInputEl.focus();    
                 }
                 
