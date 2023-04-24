@@ -47,6 +47,7 @@ export class Penefiles {
         this.sortByDate = 0;
         this.sortByName = 0;
         this.onlyShowMine = 0;
+        this.pdfTask = null;
 
         // Data
         this.files = [];
@@ -736,15 +737,20 @@ export class Penefiles {
             const things = sql(this.queries.findFileWithTagsSubQueries[this.sortByDate * 100 + this.sortByName * 10 + this.onlyShowMine], {
                 ":query": `%${sub}%`
             }, false);
+            let loopDict = {};
             
             if (symbol == "") {
                 for (const t of things) {
                     if (aggregate[t.id]) {
+                        if (t.id in loopDict) {
+                            continue;
+                        }
                         aggregate[t.id].count += weight;
                         continue;
                     }
                     aggregate[t.id] = t;
                     aggregate[t.id].count = weight;
+                    loopDict[t.id] = true;
                     weight -= 0.001;
                 }
             } else if (symbol == "+") {
@@ -1582,6 +1588,8 @@ function getFileInfo(f) {
         ":id": f.id,
         ":tag": "Audio"
     }, true);
+    const isDocx = f.filename.endsWith(".docx");
+    const isPdf = f.filename.endsWith(".pdf");
     
     let preview = "";
     if (hasImage.length > 0) {
@@ -1607,6 +1615,94 @@ function getFileInfo(f) {
                 你的浏览器也许不支持视频播放。
             </audio>
         </div>`;
+    }
+    if (isDocx) {
+        fetch(`${API}/${f.realfile}/${f.filename}`).then(res => {
+            return res.blob();
+        }).then(blob => {
+            console.log(document.querySelector(".preview-container"));
+            docx.renderAsync(blob, document.querySelector(".preview-container"), null, {
+                
+            });
+        }).catch(e => {
+            session.message("错误：无法预览 .doc 文件。", e.toString());
+        });
+        preview += `
+            <div class="preview-container"></div>
+        `;
+    }
+    if (isPdf) {
+        if (session.pdfTask) {
+            session.pdfTask.destroy();
+        }
+
+        let pdfTask = pdfjsLib.getDocument(`${API}/${f.realfile}/${f.filename}`);
+        session.pdfTask = pdfTask;
+        pdfTask.promise.then(pdf => {
+            const canvas = document.querySelector(".preview-canvas");
+            const ctx = canvas.getContext("2d");
+            if (canvas.getBoundingClientRect().width > 720) {
+                canvas.width = 720 * 2;
+            } else {
+                canvas.width = canvas.getBoundingClientRect().width * 2;
+            }
+            
+            let width = canvas.width;
+            let currentPage = 1;
+            let prevPageEl = document.querySelector("#prev-page");
+            let nextPageEl = document.querySelector("#next-page");
+            console.log(pdf);
+
+            function displayPage() {
+                pdf.getPage(currentPage).then(page => {
+                    let viewport = page.getViewport({ scale: 1.0 });
+                    let aspect = width / viewport.width;
+                    let height = viewport.height * aspect;
+                    canvas.height = height;
+                    let scaledViewport = page.getViewport({ scale: aspect });
+                    let renderCtx = {
+                        canvasContext: ctx,
+                        viewport: scaledViewport
+                    };
+                    let renderTask = page.render(renderCtx);
+                }).catch(e => {
+                    session.message("无法渲染 .pdf 文件。", e.toString());
+                });
+            }
+            displayPage();
+
+            prevPageEl.addEventListener("click", () => {
+                currentPage--;
+                if (currentPage < 1) {
+                    currentPage = 1;
+                }
+                displayPage();
+            });
+            nextPageEl.addEventListener("click", () => {
+                currentPage++;
+                if (currentPage >= pdf.numPages) {
+                    currentPage = pdf.numPages;
+                }
+                displayPage();
+            });
+            
+        });
+        preview += `
+            <div class="info-pane-operations-container sticky">
+                <div class="file-operations">
+                    <div id="prev-page" class="control-button with-icon controls">
+                        <img class="icon-controls" src="assets/book_previous.svg">
+                        <div>上一页</div>
+                    </div>
+                    <div id="next-page" class="control-button with-icon controls">
+                        <img class="icon-controls" src="assets/book_next.svg">
+                        <div>下一页</div>
+                    </div>
+                </div>
+            </div>
+            
+            <canvas class="preview-canvas"></canvas>
+        `;
     }
 
     return `

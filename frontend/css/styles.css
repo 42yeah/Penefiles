@@ -241,6 +241,11 @@ html {
     width: 100%;
 }
 
+.preview-container {
+    padding-top: 5px;
+    width: 100%;
+}
+
 .big-image-preview > img {
     width: auto;
     height: auto;
@@ -259,6 +264,13 @@ html {
     padding: 5px;
     display: flex;
     border: 1px solid #aaa;
+    background-color: white;
+}
+
+.sticky {
+    position: sticky;
+    left: 0;
+    top: 0;
 }
 
 .info-pane-operations-container {
