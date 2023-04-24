@@ -190,6 +190,10 @@ html {
     height: auto;
 }
 
+.preview-canvas {
+    width: 100%;
+}
+
 .top-operations {
     flex: 1;
     display: flex;

@@ -1646,8 +1646,10 @@ function getFileInfo(f) {
             const ctx = canvas.getContext("2d");
             if (canvas.getBoundingClientRect().width > 720) {
                 canvas.width = 720 * 2;
+                console.log("A", canvas.width);
             } else {
-                canvas.width = canvas.getBoundingClientRect().width * 2;
+                canvas.width = session.infoPaneEl.clientWidth * 2;
+                console.log(canvas.width);
             }
             
             let width = canvas.width;
