@@ -719,13 +719,12 @@ export class Penefiles {
         let subQueries = query.split(" ");
         let aggregate = {};
         let weight = 1;
-        let symbol = "";
         if (this.onlyShowMine) {
             subQueries.push(`+${this.username}`);
         }
 
         for (let sub of subQueries) {
-            // AND operation - the current aggregate MUST contain the following
+            let symbol = "";
             if (sub.startsWith("+") || sub.startsWith("-")) {
                 symbol = sub[0];
                 sub = sub.substr(1);
