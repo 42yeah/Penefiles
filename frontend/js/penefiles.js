@@ -729,6 +729,9 @@ export class Penefiles {
             if (sub.startsWith("+") || sub.startsWith("-")) {
                 symbol = sub[0];
                 sub = sub.substr(1);
+                if (sub.trim().length == 0) {
+                    continue;
+                }
             }
             const things = sql(this.queries.findFileWithTagsSubQueries[this.sortByDate * 100 + this.sortByName * 10 + this.onlyShowMine], {
                 ":query": `%${sub}%`
@@ -1181,10 +1184,9 @@ export class Penefiles {
                 this.tagsInputEl = document.querySelector("#tags-input");
                 if (window.innerWidth > 645) {
                     this.tagsInputEl.focus();
+                    this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
+                    this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
                 }
-                
-                this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
-                this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
                 
                 return;    
             } 
@@ -1270,9 +1272,9 @@ export class Penefiles {
 
         if (window.innerWidth > 645) {
             this.tagsInputEl.focus();
+            this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
+            this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
         }
-        this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
-        this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
 
         if (this.lastSelectedID && this.lastSelectedID > 0) {
             const lastSelectedEl = document.querySelector("#file-entry-" + this.lastSelectedID);
