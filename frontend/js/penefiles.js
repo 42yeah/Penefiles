@@ -445,7 +445,7 @@ export class Penefiles {
         let url = `${API}/${f[0].realfile}/${f[0].filename}`;
         const isMarkdown = f[0].filename.endsWith(".md");
         if (isMarkdown) {
-            url = `${FRONTEND}/notes?id=${f[0].id}`;
+            url = `${FRONTEND}/notes.html?id=${f[0].id}`;
         }
         if ("share" in navigator) {
             navigator.share({
