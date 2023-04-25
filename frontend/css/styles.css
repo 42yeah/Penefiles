@@ -597,6 +597,19 @@ mjx-container {
     overflow-x: auto;
 }
 
+.note-crossref {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #aaa;
+    padding: 0 5px;
+    text-decoration: none;
+    color: #111;
+}
+
+.crossref-label {
+    padding-left: 5px;
+}
+
 @media screen and (max-width: 645px) {
     .container {
         flex-direction: column-reverse;

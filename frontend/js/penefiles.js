@@ -170,7 +170,7 @@ export class Penefiles {
             findTagsOfFile: this.db.prepare("SELECT * FROM files_tags WHERE fileid=:id;"),
             findFileWithTags: this.db.prepare("SELECT * FROM files INNER JOIN files_tags WHERE id=fileid AND (tag LIKE :query OR filename LIKE :query);"),
             findFileWithTagsSubQueries: {},
-            getFileFromRealfile: this.db.prepare("SELECT * FROM files WHERE realfile=:realfile"),
+            getFileFromRealfile: this.db.prepare("SELECT * FROM files WHERE realfile=:realfile;"),
             deleteAllFiles: this.db.prepare("DELETE FROM files;"),
             deleteAllUsers: this.db.prepare("DELETE FROM users;"),
             deleteAllFilesTags: this.db.prepare("DELETE FROM files_tags;")
@@ -515,11 +515,19 @@ export class Penefiles {
         this.notesCM.update([transaction]);
     }
 
+    doDiscardNote() {
+        this.notesCM = null;
+        let id = this.lastSelectedID;
+        this.lastSelectedID = -1;
+        this.fileInfo(id);
+    }
+
     doSubmitNote() {
         let filename = this.fileNameInputEl.value;
         let tags = this.tagsInputEl.value.trim().split(" ");
         let content = this.notesCM.state.doc.toString();
         let session = this.session;
+        this.notesCM = null;
         let req = {
             filename,
             tags,
@@ -570,6 +578,7 @@ export class Penefiles {
         let filename = this.fileNameInputEl.value;
         let tags = this.tagsInputEl.value.trim().split(" ");
         let content = this.notesCM.state.doc.toString();
+        this.notesCM = null;
         let session = this.session;
         let realfile = f[0].realfile.split("/")[1];
         let req = {
@@ -1312,6 +1321,27 @@ export class Penefiles {
     fileInfo(id, event) {
         const f = sql(this.queries.findFileById, { ":id": id }, true);
 
+        if (this.notesCM) {
+            const ranges = session.notesCM.state.selection.ranges[0];
+            const tags = sql(this.queries.findTagsOfFile, { ":id": id }, false);
+            let inserted = `[[${f[0].realfile}]]`;
+            if (tags.find(pred => {
+                return pred.tag == "Note"
+            })) {
+                inserted = `((${f[0].id}))`;
+            }
+
+            let transaction = this.notesCM.state.update({
+                changes: {
+                    from: ranges.from,
+                    to: ranges.to,
+                    insert: inserted
+                }
+            });
+            this.notesCM.update([transaction]);
+            return;
+        }
+
         let hasMultiSelect = this.multiSelect.length > 0;
         if (event && event.shiftKey && this.lastSelectedID > 0) {
             if (hasMultiSelect) {
@@ -1884,7 +1914,47 @@ function getFileInfo(f) {
             return res.text();
         }).then(text => {
             let preview = document.querySelector(".markdown-preview");
-            preview.innerHTML = marked.parse(text);
+            let parsed = marked.parse(text);
+            let crossrefsRegex = /\(\((\d+)\)\)/g;
+            let matches = [...parsed.matchAll(crossrefsRegex)];
+
+            for (const m of matches) {
+                const f = sql(session.queries.findFileById, { ":id": +m[1] }, true);
+                let filename = "???";
+                if (f.length == 0) {
+                    session.message("错误：无法找到 Note 中引用的文件。", `${m[1]} 是一个不存在的 Note。是已经被删除了吗？`);
+                } else {
+                    filename = f[0].filename;
+                }
+                parsed = parsed.replace(m[0], `
+                    <a href="javascript:session.fileInfo(${m[1]})" class="controls note-crossref">
+                        <img src="assets/page_white_edit.svg" class="icon-controls">
+                        <span class="crossref-label">${filename}</span>
+                    </a>
+                `);
+            }
+            
+            let attachmentRegex = /\[\[(.+)\]\]/g;
+            matches = [...parsed.matchAll(attachmentRegex)];
+            for (const m of matches) {
+                const f = sql(session.queries.getFileFromRealfile, { ":realfile": m[1] }, true);
+                let filename = "???";
+                let href = "#";
+                if (f.length == 0) {
+                    session.message("错误：无法找到 Note 中引用的文件。", `${m[1]} 是一个不存在的文件。是已经被删除了吗？`);
+                } else {
+                    filename = f[0].filename;
+                    href = `${API}/${m[1]}/${filename}`;
+                }
+                parsed = parsed.replace(m[0], `
+                    <a href="${href}" class="controls note-crossref">
+                        <img src="assets/attach.svg" class="icon-controls">
+                        <span class="crossref-label">${filename}</span>
+                    </a>
+                `);
+            }
+
+            preview.innerHTML = parsed;
             document.querySelector("#markdown-src").innerHTML = text;
             MathJax.typeset([preview]);
         }).catch(e => {
@@ -1897,11 +1967,7 @@ function getFileInfo(f) {
         `;
 
         return `
-            <h5 class="file-name-title gray">${f.filename}</h5>
-            <div class="hidden" id="markdown-src"></div>
-            <input id="file-url" value="${encodeURI(API + "/" + f.realfile + "/" + f.filename)}" class="readonly hidden">
-            ${preview}
-            <div class="info-pane-operations-container sticky-bottom">
+            <div class="info-pane-operations-container sticky">
                 <div class="file-operations">
                     <div onclick="session.doEditNote()" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/page_white_edit.svg">
@@ -1921,6 +1987,10 @@ function getFileInfo(f) {
                     </div>
                 </div>
             </div>
+            <h5 class="file-name-title gray">${f.filename}</h5>
+            <div class="hidden" id="markdown-src"></div>
+            <input id="file-url" value="${encodeURI(API + "/" + f.realfile + "/" + f.filename)}" class="readonly hidden">
+            ${preview}
         `;
     }
 
@@ -2097,6 +2167,10 @@ function getModifyNotes(filename, tags) {
             <div onclick="session.doSaveNote()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/page_white_edit.svg">
                 <div>保存笔记</div>
+            </div>
+            <div onclick="session.doDiscardNote()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/cancel.svg">
+                <div>放弃修改</div>
             </div>
             <div onclick="session.doDelete()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/bin.svg">
