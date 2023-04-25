@@ -40,10 +40,15 @@ public:
     oatpp::Object<ResponseDto> untag_file(const oatpp::Object<FileTagDto> &dto);
     oatpp::Object<FileDto> locate_file(const std::string &realfile);
 
+    oatpp::Object<ResponseDto> create_note(const oatpp::Object<AuthNoteUpdateDto> &dto);
+    oatpp::Object<ResponseDto> update_note(const oatpp::Object<AuthNoteUpdateDto> &dto);
+
     oatpp::Object<DataDto<oatpp::Object<UserDto> > > list_users();
     oatpp::Object<DataDto<oatpp::Object<FileDto> > > list_files();
     oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > list_files_tags();
     oatpp::Object<DataDto<oatpp::Object<TagDto> > > list_tags();
+
+    void create_uploads_folder_or_die();
 };
 
 

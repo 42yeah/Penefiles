@@ -95,6 +95,17 @@ class AuthFileUpdateDto : public oatpp::DTO
     DTO_FIELD(Vector<String>, tags);
 };
 
+class AuthNoteUpdateDto : public oatpp::DTO
+{
+    DTO_INIT(AuthNoteUpdateDto, DTO)
+
+    DTO_FIELD(String, session);
+    DTO_FIELD(String, realfile);
+    DTO_FIELD(String, filename);
+    DTO_FIELD(String, content);
+    DTO_FIELD(Vector<String>, tags);
+};
+
 template<typename T>
 class DataDto : public oatpp::DTO
 {

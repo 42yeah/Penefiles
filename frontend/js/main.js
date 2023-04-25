@@ -1,4 +1,4 @@
-import { Penefiles } from "./penefiles.js"
+import { Penefiles } from "./penefiles.js";
 
 window.SQL = await initSqlJs({
     locateFile: file => `js/sqljs-wasm/sql-wasm.wasm`

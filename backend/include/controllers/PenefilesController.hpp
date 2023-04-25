@@ -144,29 +144,13 @@ public:
     {
         namespace multipart = oatpp::web::mime::multipart;
 
-        fs::path uploads("uploads");
-        auto stat = fs::status(uploads);
-        if (fs::status_known(stat) && stat.type() == fs::file_type::not_found)
-        {
-            OATPP_LOGI("PENEfiles", "Creating directory uploads/...");
-            fs::create_directory(uploads);
-        }
-        stat = fs::status(uploads);
-        if (stat.type() != fs::file_type::directory)
-        {
-            OATPP_LOGE("PENEfiles", "PENEfiles cannot create uploads. This is very bad, so uploads are off.");
-
-            auto res = ResponseDto::createShared();
-            res->status = 500;
-            res->message = "Server side upload folder error";
-            return createDtoResponse(Status::CODE_200, res);
-        }
+        penefiles_service.create_uploads_folder_or_die();
 
         auto mp = std::make_shared<multipart::PartList>(request->getHeaders());
         multipart::Reader mp_reader(mp.get());
         
         mp_reader.setPartReader("session", multipart::createInMemoryPartReader(32));
-        std::string random_filename = uploads / penefiles_service.generate_random_string(32);
+        std::string random_filename = fs::path("uploads") / penefiles_service.generate_random_string(32);
         mp_reader.setPartReader("file", multipart::createFilePartReader(random_filename));
         request->transferBody(&mp_reader);
 
@@ -205,6 +189,28 @@ public:
         res->status = 200;
         res->message = random_filename;
         return createDtoResponse(Status::CODE_200, res);
+    }
+
+    ENDPOINT("POST", "/notes/create", notes_create,
+        BODY_DTO(Object<AuthNoteUpdateDto>, auth_note_update_dto))
+    {
+        OATPP_ASSERT_HTTP(auth_note_update_dto->session, Status::CODE_500, "Login first");
+        OATPP_ASSERT_HTTP(auth_note_update_dto->filename, Status::CODE_500, "No file name");
+        OATPP_ASSERT_HTTP(auth_note_update_dto->content, Status::CODE_500, "No content");
+        OATPP_ASSERT_HTTP(penefiles_service.authenticate(auth_note_update_dto->session), Status::CODE_500, "Not logged in.");
+        
+        return createDtoResponse(Status::CODE_200, penefiles_service.create_note(auth_note_update_dto));
+    }
+
+    ENDPOINT("POST", "/notes/update", notes_update,
+        BODY_DTO(Object<AuthNoteUpdateDto>, auth_note_update_dto))
+    {
+        OATPP_ASSERT_HTTP(auth_note_update_dto->session, Status::CODE_500, "Login first");
+        OATPP_ASSERT_HTTP(auth_note_update_dto->filename, Status::CODE_500, "No file name");
+        OATPP_ASSERT_HTTP(auth_note_update_dto->content, Status::CODE_500, "No content");
+        OATPP_ASSERT_HTTP(penefiles_service.authenticate(auth_note_update_dto->session), Status::CODE_500, "Not logged in.");
+
+        return createDtoResponse(Status::CODE_200, penefiles_service.update_note(auth_note_update_dto));
     }
 };
 

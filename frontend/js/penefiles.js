@@ -450,6 +450,164 @@ export class Penefiles {
         }
     }
 
+    doCreateNote() {
+        if (this.session == null) {
+            this.message("请先登陆。", `你必须要先 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+                <img src="assets/key.svg" class="icon-controls">
+                <div>登陆</div>
+            </div> 才能创建笔记。`);
+            return;
+        }
+        const now = new Date();
+        let filename = `新笔记 ${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}.md`;
+        let tags = `${this.username} Note`;
+        this.setInfoPaneContent(getCreateNotes(filename, tags));
+        this.notesAreaContainerEl = document.querySelector(".notes-area-container");
+        this.notesCM = createCodeMirror(this.notesAreaContainerEl);
+        this.tagsInputEl = document.querySelector("#tags-input");
+        this.fileNameInputEl = document.querySelector("#file-name-input");
+        this.lastSelectedID = -1;
+        this.doQuickSearch();
+    }
+
+    doEditNote() {
+        if (this.session == null) {
+            this.message("请先登陆。", `你必须要先 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+                <img src="assets/key.svg" class="icon-controls">
+                <div>登陆</div>
+            </div> 才能创建笔记。`);
+            return;
+        }
+
+        let markdownSrc = document.querySelector("#markdown-src");
+        if (!markdownSrc || markdownSrc.innerHTML == "") {
+            this.message("请先等待 Notes 加载完毕。", "Notes 仍在加载过程当中，请在完全显示出来之后再进行编辑。");
+            return;
+        }
+
+        const f = sql(this.queries.findFileById, {
+            ":id": this.lastSelectedID
+        }, true);
+        if (f.length == 0) {
+            this.message("错误：无法找到要修改的笔记。", "PENEfiles 状态机估计出了某些问题。");
+            return;
+        }
+        const tags = sql(this.queries.findTagsOfFile, { ":id": f[0].id }, false);
+        let tagsStr = "";
+        for (const t of tags) {
+            tagsStr += t.tag + " ";
+        }
+
+        this.setInfoPaneContent(getModifyNotes(f[0].filename, tagsStr));
+        this.notesAreaContainerEl = document.querySelector(".notes-area-container");
+        this.notesCM = createCodeMirror(this.notesAreaContainerEl);
+        this.tagsInputEl = document.querySelector("#tags-input");
+        this.fileNameInputEl = document.querySelector("#file-name-input");
+        
+        let src = markdownSrc.innerText;
+        let transaction = this.notesCM.state.update({
+            changes: {
+                from: 0,
+                to: this.notesCM.state.doc.length,
+                insert: src
+            }
+        });
+        this.notesCM.update([transaction]);
+    }
+
+    doSubmitNote() {
+        let filename = this.fileNameInputEl.value;
+        let tags = this.tagsInputEl.value.trim().split(" ");
+        let content = this.notesCM.state.doc.toString();
+        let session = this.session;
+        let req = {
+            filename,
+            tags,
+            session,
+            content
+        };
+
+        fetch(`${API}/notes/create`, {
+            method: "POST",
+            body: JSON.stringify(req)
+        }).then(res => {
+            return res.text();
+        }).then(text => {
+            let json = {};
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                console.log(e);
+                let lines = text.split("\n");
+                this.message("错误：笔记创建失败。", lines[3].split("=")[1]);
+                return;
+            }
+            if (json.status != 200) {
+                this.message("错误：笔记创建失败。", json.message);
+                return;
+            }
+            this.doRefresh().then(() => {
+                const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
+                if (f.length == 0) {
+                    this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
+                    return;
+                }
+                this.fileInfo(f[0].id);
+            });
+        }).catch(e => {
+            this.message("错误：笔记创建失败。", e.toString());
+        });
+    }
+
+    doSaveNote() {
+        const f = sql(this.queries.findFileById, {
+            ":id": this.lastSelectedID
+        }, true);
+        if (f.length == 0) {
+            this.message("错误：无法找到要修改的笔记。", "PENEfiles 状态机估计出了某些问题。");
+            return;
+        }
+        let filename = this.fileNameInputEl.value;
+        let tags = this.tagsInputEl.value.trim().split(" ");
+        let content = this.notesCM.state.doc.toString();
+        let session = this.session;
+        let realfile = f[0].realfile.split("/")[1];
+        let req = {
+            filename,
+            tags,
+            session,
+            content,
+            realfile
+        };
+        fetch(`${API}/notes/update`, {
+            method: "POST",
+            body: JSON.stringify(req)
+        }).then(res => {
+            return res.text();
+        }).then(text => {
+            let json = {};
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                console.log(e);
+                let lines = text.split("\n");
+                this.message("错误：笔记修改失败。", lines[3].split("=")[1]);
+                return;
+            }
+            if (json.status != 200) {
+                this.message("错误：笔记修改失败。", json.message);
+                return;
+            }
+            this.doRefresh().then(() => {
+                // Do this to prevent accidental file download
+                this.lastSelectedID = -1;
+                this.fileInfo(f[0].id);
+            });
+        }).catch(e => {
+            this.message("错误：笔记修改失败。", e.toString());
+        });
+    }
+
     doUpload() {
         if (this.uploadFileEl.length == 0) {
             return;
@@ -1278,7 +1436,7 @@ export class Penefiles {
         this.tagsInputEl = document.querySelector("#tags-input");
         this.fileUrlEl = document.querySelector("#file-url");
 
-        if (window.innerWidth > 645) {
+        if (window.innerWidth > 645 && this.tagsInputEl) {
             this.tagsInputEl.focus();
             this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
             this.tagsInputEl.selectionEnd = this.tagsInputEl.value.length;
@@ -1593,6 +1751,7 @@ function getFileInfo(f) {
     const isDocx = f.filename.endsWith(".docx");
     const isPdf = f.filename.endsWith(".pdf");
     const isTiff = f.filename.endsWith(".tif") || f.filename.endsWith(".tiff");
+    const isMarkdown = f.filename.endsWith(".md");
     
     let preview = "";
     if (hasImage.length > 0) {
@@ -1720,6 +1879,50 @@ function getFileInfo(f) {
             session.message(`无法预览 ${f.filename}。`, e.toString());
         });
     }
+    if (isMarkdown) {
+        fetch(`${API}/${f.realfile}/${f.filename}`).then(res => {
+            return res.text();
+        }).then(text => {
+            let preview = document.querySelector(".markdown-preview");
+            preview.innerHTML = marked.parse(text);
+            document.querySelector("#markdown-src").innerHTML = text;
+            MathJax.typeset([preview]);
+        }).catch(e => {
+            session.message(`无法预览 ${f.filename}。`, e.toString());
+        });
+        preview += `
+            <div class="info-pane-table-container big-screen-h-center flex-1">
+                <div class="markdown-preview"></div>
+            </div>
+        `;
+
+        return `
+            <h5 class="file-name-title gray">${f.filename}</h5>
+            <div class="hidden" id="markdown-src"></div>
+            <input id="file-url" value="${encodeURI(API + "/" + f.realfile + "/" + f.filename)}" class="readonly hidden">
+            ${preview}
+            <div class="info-pane-operations-container sticky-bottom">
+                <div class="file-operations">
+                    <div onclick="session.doEditNote()" class="control-button with-icon controls">
+                        <img class="icon-controls" src="assets/page_white_edit.svg">
+                        <div>编辑笔记</div>
+                    </div>
+                    <a href="${API}/${f.realfile}/${f.filename}" class="control-button with-icon controls">
+                        <img class="icon-controls" src="assets/disk.svg">
+                        <div>下载文件</div>
+                    </a>
+                    <div onclick="session.doDelete()" class="control-button with-icon controls">
+                        <img class="icon-controls" src="assets/bin.svg">
+                        <div>删除文件</div>
+                    </div>
+                    <div onclick="session.doShare()" class="control-button with-icon controls">
+                        <img class="icon-controls" src="assets/link.svg">
+                        <div>分享笔记</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     return `
     <h2 class="file-name-title">${f.filename}</h2>
@@ -1834,6 +2037,79 @@ function getMultiselect(selections) {
     `;
 }
 
+function getCreateNotes(filename, tags) {
+    return `<div class="info-pane-operations">
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">文件名</div>
+            <div class="info-pane-input">
+                <input id="file-name-input" onkeydown="return checkSlash(event.key)" id="file-name-input" class="controls info-pane-tags-input" value="${filename}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">标签</div>
+            <div class="info-pane-input">
+                <input id="tags-input" onkeydown="return checkSlash(event.key)" id="tags-input" class="controls info-pane-tags-input" value="${tags}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">私有</div>
+            <div class="info-pane-checkbox">
+                <input class="controls" type="checkbox">
+            </div>
+        </div>
+    </div>
+    <div class="info-pane-operations-container sticky">
+        <div class="file-operations">
+            <div onclick="session.doSubmitNote()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/page_white_edit.svg">
+                <div>创建笔记</div>
+            </div>
+        </div>
+    </div>
+    <div class="notes-area-container">
+        
+    </div>`;
+}
+
+function getModifyNotes(filename, tags) {
+    return `<div class="info-pane-operations">
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">文件名</div>
+            <div class="info-pane-input">
+                <input id="file-name-input" onkeydown="return checkSlash(event.key)" id="file-name-input" class="controls info-pane-tags-input" value="${filename}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">标签</div>
+            <div class="info-pane-input">
+                <input id="tags-input" onkeydown="return checkSlash(event.key)" id="tags-input" class="controls info-pane-tags-input" value="${tags}">
+            </div>
+        </div>
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">私有</div>
+            <div class="info-pane-checkbox">
+                <input class="controls" type="checkbox">
+            </div>
+        </div>
+    </div>
+    <div class="info-pane-operations-container sticky">
+        <div class="file-operations">
+            <div onclick="session.doSaveNote()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/page_white_edit.svg">
+                <div>保存笔记</div>
+            </div>
+            <div onclick="session.doDelete()" class="control-button with-icon controls">
+                <img class="icon-controls" src="assets/bin.svg">
+                <div>删除文件</div>
+            </div>
+        </div>
+    </div>
+    <div class="notes-area-container">
+        
+    </div>`;
+}
+
+
 window.checkSlash = (k) => {
     if (k == "/") {
         return false;
@@ -1843,6 +2119,9 @@ window.checkSlash = (k) => {
 
 // Hotkeys 
 window.onkeyup = (e) => {
+    if (e.srcElement.classList.contains("cm-content")) {
+        return false;
+    }
     if (e.key == "/") {
         session.quickSearchEl.focus();
         e.preventDefault();

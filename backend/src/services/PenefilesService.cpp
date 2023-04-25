@@ -2,6 +2,7 @@
 #include <random>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 #include "filesystem.hpp"
 
 oatpp::Object<ResponseDto> PenefilesService::create_user(const oatpp::Object<UserRegistrationDto> &dto)
@@ -426,4 +427,82 @@ oatpp::Object<FileDto> PenefilesService::locate_file(const std::string &realfile
     OATPP_ASSERT_HTTP(file->size() == 1, Status::CODE_500, "Unknown file error");
 
     return file[0];
+}
+
+oatpp::Object<ResponseDto> PenefilesService::create_note(const oatpp::Object<AuthNoteUpdateDto> &dto)
+{
+    const std::lock_guard<std::mutex> guardian(mu);
+
+    auto user = select_user_by_session(dto->session);
+    std::vector<std::string> tags;
+    for (int i = 0; i < dto->tags->size(); i++)
+    {
+        tags.push_back(dto->tags[i]);
+    }
+    if (std::find(tags.begin(), tags.end(), std::string(user->username)) == tags.end())
+    {
+        tags.push_back(user->username);
+    }
+
+    create_uploads_folder_or_die();
+
+    std::string realfile = fs::path("uploads") / generate_random_string(32);
+
+    std::ofstream writer(realfile);
+    OATPP_ASSERT_HTTP(writer.good(), Status::CODE_500, "Cannot open file to write");
+    writer << dto->content->c_str();
+    writer.close();
+
+    auto res = database->create_file(dto->filename, realfile, dto->content->size());
+    OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+    int id = oatpp::sqlite::Utils::getLastInsertRowId(res->getConnection());
+
+    for (const auto &file_tag : tags)
+    {
+        res = database->bind_tag_to_file(id, file_tag);
+        if (!res->isSuccess())
+        {
+            OATPP_LOGW("PENEfiles", "Cannot bind tag %s to %s: %s.", file_tag.c_str(), dto->filename->c_str(), res->getErrorMessage()->c_str());
+        }
+    }
+
+    oatpp::Object<ResponseDto> response = ResponseDto::createShared();
+    response->status = 200;
+    response->message = realfile;
+    return response;
+}
+
+oatpp::Object<ResponseDto> PenefilesService::update_note(const oatpp::Object<AuthNoteUpdateDto> &dto)
+{
+    auto update_dto = AuthFileUpdateDto::createShared();
+    update_dto->filename = dto->filename;
+    update_dto->realfile = dto->realfile;
+    update_dto->session = dto->session;
+    update_dto->tags = dto->tags;
+    update_file(update_dto);
+
+    const std::lock_guard<std::mutex> guardian(mu);
+    auto file = locate_file(dto->realfile);
+    std::ofstream writer(file->realfile);
+    OATPP_ASSERT_HTTP(writer.good(), Status::CODE_500, "Cannot open file");
+    writer << dto->content->c_str();
+    writer.close();
+
+    oatpp::Object<ResponseDto> response = ResponseDto::createShared();
+    response->status = 200;
+    response->message = dto->realfile;
+    return response;
+}
+
+void PenefilesService::create_uploads_folder_or_die()
+{
+    fs::path uploads("uploads");
+    auto stat = fs::status(uploads);
+    if (fs::status_known(stat) && stat.type() == fs::file_type::not_found)
+    {
+        OATPP_LOGI("PENEfiles", "Creating directory uploads/...");
+        fs::create_directory(uploads);
+    }
+    stat = fs::status(uploads);
+    OATPP_ASSERT_HTTP(stat.type() == fs::file_type::directory, Status::CODE_500, "PENEfiles cannot create uploads. This is a severe server side error. Please contact admin.");
 }

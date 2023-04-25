@@ -53,7 +53,7 @@
                 <div class="bottom-bar">
                     <input id="quick-search" onkeyup="session.doQuickSearch()" class="search-input controls" placeholder="按 / 快速访问。">
                     <div class="quick-operations">
-                        <div class="quick-notes controls">
+                        <div onclick="session.doCreateNote()" class="quick-notes controls">
                             <img src="assets/page_white_edit.svg" class="icon-controls">
                         </div>
                         <input onchange="session.doUpload()" class="hidden" id="upload-file" type="file" multiple>
@@ -114,5 +114,8 @@
     <script src="/js/docx-preview.min.js"></script>
     <script src="/js/pdf.min.js"></script>
     <script src="/js/UTIF.js"></script>
+    <script src="/js/editor.bundle.js"></script>
+    <script src="/js/marked.min.js"></script>
+    <script src="/js/tex-mml-chtml.js"></script>
 </body>
 </html>
