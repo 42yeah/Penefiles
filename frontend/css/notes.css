@@ -1,0 +1,146 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-family: "PingFang SC", 'Segoe UI', "DengXian Regular", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1em;
+}
+
+.info-pane-operations-container {
+    display: none;
+}
+
+.hidden {
+    display: none;
+}
+
+.gray {
+    color: gray;
+}
+
+.container {
+    padding: 1em;
+}
+
+.markdown-preview {
+    padding: 5px;
+    max-width: 720px;
+    padding-top: 2em;
+}
+
+.markdown-preview > h1,
+.markdown-preview > h2,
+.markdown-preview > h3,
+.markdown-preview > h4,
+.markdown-preview > h5 {
+    padding-top: 0.5em;
+    padding-bottom: 0.25em;
+}
+
+.markdown-preview > h1:first-child,
+.markdown-preview > h2:first-child,
+.markdown-preview > h3:first-child,
+.markdown-preview > h4:first-child,
+.markdown-preview > h5:first-child {
+    padding-top: 0;
+    padding-bottom: 1em;
+}
+
+.markdown-preview > pre {
+    overflow-x: auto;
+    padding: 5px 0;
+    line-height: 1.2em;
+}
+
+.markdown-preview > pre > code,
+.markdown-preview > p > code {
+    font-family: "SF Mono", "Consolas", 'Courier New', Courier, monospace;
+    line-height: 1.2em;
+}
+
+.markdown-preview > pre {
+    padding-bottom: 0.5em;
+}
+
+.markdown-preview {
+    line-height: 1.5em;
+}
+
+ul {
+    padding-left: 20px;
+}
+
+ol {
+    padding-left: 20px;
+    list-style: decimal;
+}
+
+ul ul {
+    list-style: disc;
+}
+
+ul ul ul {
+    list-style: circle;
+}
+
+ul ul ul ul {
+    list-style: square;
+}
+
+ul ul ul ul ul {
+    list-style: disc;
+}
+
+ul ul ul ul ul ul {
+    list-style: circle;
+}
+
+.markdown-preview > ul {
+    list-style: square;
+    padding-bottom: 1em;
+}
+
+.markdown-preview > ul > li {
+    display: list-item;
+}
+
+.markdown-preview > p {
+    padding-bottom: 1em;
+}
+
+mjx-container {
+    overflow-x: auto;
+}
+
+.note-crossref {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #aaa;
+    padding: 0 5px;
+    text-decoration: none;
+    color: #111;
+}
+
+.crossref-label {
+    padding-left: 5px;
+}
+
+.icon-controls {
+    width: 20px;
+    height: 20px;
+}
+
+@media screen and (min-width: 720px) {
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .markdown-preview {
+        padding-top: 4em;
+    }
+}

@@ -1,4 +1,4 @@
-import { API } from "./config.js";
+import { API, FRONTEND } from "./config.js";
 
 // 
 // The Penefiles state machine.
@@ -7,7 +7,7 @@ import { API } from "./config.js";
 // Tags, etc.
 //
 export class Penefiles {
-    constructor() {
+    constructor(headless = false) {
         this.loggedIn = false;
 
         // Element finders
@@ -29,9 +29,12 @@ export class Penefiles {
         this.sortByDateEl = document.querySelector("#sort-by-date");
         this.sortByNameEl = document.querySelector("#sort-by-name");
         this.onlyShowMineEl = document.querySelector("#only-show-mine");
+        this.headless = headless;
     
-        this.fileListEl.onscroll = (e) => {
-            this.fileListScrollTop = this.fileListEl.scrollTop;
+        if (!headless) {
+            this.fileListEl.onscroll = (e) => {
+                this.fileListScrollTop = this.fileListEl.scrollTop;
+            }
         }
 
         // Variables
@@ -275,7 +278,10 @@ export class Penefiles {
     }
 
     updateTopOperations() {
-        
+        if (this.headless) {
+            return;
+        }
+
         if (this.session == null) {
             this.loginTopControlEl.classList.remove("hidden");
             this.registerTopControlEl.classList.remove("hidden");
@@ -436,14 +442,20 @@ export class Penefiles {
             this.message("错误：无法分享该文件。", "该文件已经不存在于数据库中。你也许需要刷新。");
             return;
         }
+        let url = `${API}/${f[0].realfile}/${f[0].filename}`;
+        const isMarkdown = f[0].filename.endsWith(".md");
+        if (isMarkdown) {
+            url = `${FRONTEND}/notes?id=${f[0].id}`;
+        }
         if ("share" in navigator) {
             navigator.share({
                 title: `${f[0].filename} | PENEfiles`,
                 text: `${this.username} 正在使用 PENEfiles 和你分享 ${f[0].filename}。`,
-                url: `${API}/${f[0].realfile}/${f[0].filename}`
+                url: url
             });
         } else {
             this.fileUrlEl.select();
+            this.fileUrlEl.value = url;
             this.fileUrlEl.setSelectionRange(0, this.fileUrlEl.value.length + 1);
             navigator.clipboard.writeText(this.fileUrlEl.value);
             this.message("链接已经复制到你的剪贴板。", "由于你的浏览器不支持分享功能，链接已经复制到了你的剪贴板中。");
@@ -863,6 +875,10 @@ export class Penefiles {
     }
 
     doQuickSearch() {
+        if (this.headless) {
+            return;
+        }
+
         // if (this.multiSelect.length > 0) {
         //     for (const f of this.multiSelect) {
         //         document.querySelector("#file-entry-" + f.id).classList.remove("selected");
@@ -1288,6 +1304,10 @@ export class Penefiles {
     }
 
     message(title, explanation) {
+        if (this.headless) {
+            return;
+        }
+
         this.superPositionInfoWindowShown = true;
         this.setSuperpositionInfoWindowContent(`
         <h2>${title}</h2>
@@ -1691,7 +1711,7 @@ function getUserInfo() {
     `;
 }
 
-function sql(query, binds, once) {
+export function sql(query, binds, once) {
     query.bind(binds);
     let ret = [];
     while (query.step()) {
@@ -1759,7 +1779,7 @@ function getFileList(files) {
     return ret;
 }
 
-function getFileInfo(f) {
+export function getFileInfo(f) {
     let tagsStr = "";
     let tags = sql(session.queries.findTagsOfFile, { ":id": f.id }, false);
     for (const t of tags) {
