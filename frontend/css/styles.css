@@ -178,6 +178,7 @@ html {
     align-items: center;
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
+    cursor: pointer;
 }
 
 .clickable-tag.user {
@@ -455,12 +456,15 @@ html {
 }
 
 .completion-window {
-    position: absolute;
     background-color: white;
     border: 1px solid #aaa;
+    border-right: 0;
+    border-left: 0;
+    border-bottom: 0;
     padding: 5px;
-    max-width: 300px;
     overflow: hidden;
+    max-height: 100px;
+    overflow-y: scroll;
 }
 
 .ac-tags-list {

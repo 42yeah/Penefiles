@@ -278,13 +278,22 @@ export class Penefiles {
 
     setCompletionListContent(tags) {
         let html = "";
+        if (tags.length == 0) {
+            this.doHideCompletion();
+            return;
+        }
+        this.doShowCompletion();
+
+        tags = tags.sort((a, b) => {
+            return b.occurance - a.occurance;
+        });
         for (const t of tags) {
             let user = "";
             if (t.user) {
                 user = "user";
             } 
 
-            html += `<div class="clickable-tag ${user}">
+            html += `<div onclick="session.doAddSearch('${t.tag}')" class="clickable-tag ${user}">
                 <div class="clickable-tag-tag">${t.tag}</div>
                 <div class="clickable-tag-occurance">${t.occurance}</div>
             </div>`;
@@ -994,10 +1003,7 @@ export class Penefiles {
         console.log("quick search profile: ", (end - begin) / 1000.0, "s");
     }
 
-    doShowCompletion(event) {
-        const target = event.target;
-        this.completionWindowEl.style.left = `${target.offsetLeft}px`;
-        this.completionWindowEl.style.bottom = `${window.innerHeight - target.offsetTop}px`;
+    doShowCompletion() {
         this.completionWindowEl.classList.remove("hidden");
     }
 
@@ -1175,6 +1181,20 @@ export class Penefiles {
                 }
             });
         }
+    }
+
+    doAddSearch(what) {
+        if (this.quickSearchEl.value.trim() == "") {
+            this.quickSearchEl.value = what;
+            this.doQuickSearch();
+            return;
+        }
+        what = "+" + what;
+        if (!this.quickSearchEl.value.endsWith(" ")) {
+            what = " " + what;
+        }
+        this.quickSearchEl.value += what;
+        this.doQuickSearch();
     }
 
     testGet() {
