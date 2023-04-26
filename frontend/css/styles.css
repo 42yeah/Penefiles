@@ -465,7 +465,7 @@ html {
     overflow: hidden;
     max-height: 100px;
     overflow-y: auto;
-    min-height: 1.5em;
+    min-height: 70px;
 }
 
 .ac-tags-list {
