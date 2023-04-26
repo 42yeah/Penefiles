@@ -135,6 +135,12 @@ html {
     flex-wrap: wrap;
 }
 
+.ac-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 .selected {
     background-color: rgb(2, 81, 228);
     color: white;
@@ -160,6 +166,50 @@ html {
 .user {
     background-color: rgba(215, 114, 5, 0.147);
     border: 1px solid rgb(215, 144, 5);
+}
+
+.clickable-tag {
+    display: inline-flex;
+    font-size: 0.8em;
+    margin-right: 0.5em;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    background-color: rgb(5, 145, 232);
+    align-items: center;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+.clickable-tag.user {
+    background-color: rgb(255, 132, 1);
+    border: 0;
+}
+
+.clickable-tag-tag {
+    border-radius: 8px;
+    background-color: rgb(207, 233, 249);
+    padding: 1px 5px;
+}
+
+.clickable-tag.user > .clickable-tag-tag {
+    background-color: rgb(252, 234, 213);
+}
+
+.clickable-tag-occurance {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    padding: 0 2px;
+    font-weight: bold;
+    padding-right: 4px;
+    color: white;
+}
+
+.clickable-tag:hover {
+    filter: brightness(0.9);
+}
+
+.clickable-tag:active {
+    filter: brightness(0.5);
 }
 
 .file-type {
@@ -402,6 +452,19 @@ html {
     padding: 5px;
     margin-bottom: 5px;
     z-index: 1;
+}
+
+.completion-window {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #aaa;
+    padding: 5px;
+    max-width: 300px;
+    overflow: hidden;
+}
+
+.ac-tags-list {
+    padding-top: 5px;
 }
 
 .padding-top-5px {

@@ -51,7 +51,7 @@
                 <div ondragleave="return window.dragEndHandler(event)" ondragover="return window.dragOverHandler(event)" ondrop="return session.doDrop(event)" class="file-list">
                 </div>
                 <div class="bottom-bar">
-                    <input id="quick-search" onkeyup="session.doQuickSearch()" class="search-input controls" placeholder="按 / 快速访问。">
+                    <input id="quick-search" autocomplete="off" onkeyup="session.doQuickSearch()" onfocus="session.doShowCompletion(event)" onblur="session.doHideCompletion()" class="search-input controls" placeholder="按 / 快速访问。">
                     <div class="quick-operations">
                         <div onclick="session.doCreateNote()" class="quick-notes controls">
                             <img src="assets/page_white_edit.svg" class="icon-controls">
@@ -105,6 +105,11 @@
                 <!-- Rest of the upload entries -->
                 <div class="upload-entry-rest"></div>
             </div>
+        </div>
+    </div>
+    <div class="hidden completion-window">
+        <h4>该搜索下存在的标签</h4>
+        <div class="ac-tags ac-tags-list">
         </div>
     </div>
     <a target="_blank" href="#" id="download-url" class="hidden"></a>

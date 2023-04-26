@@ -29,6 +29,9 @@ export class Penefiles {
         this.sortByDateEl = document.querySelector("#sort-by-date");
         this.sortByNameEl = document.querySelector("#sort-by-name");
         this.onlyShowMineEl = document.querySelector("#only-show-mine");
+        this.completionWindowEl = document.querySelector(".completion-window");
+        this.acTagsListEl = document.querySelector(".ac-tags-list");
+        this.acTagsList = [];
         this.headless = headless;
     
         if (!headless) {
@@ -271,6 +274,22 @@ export class Penefiles {
 
     setInfoPaneContent(what) {
         this.infoPaneEl.innerHTML = what;
+    }
+
+    setCompletionListContent(tags) {
+        let html = "";
+        for (const t of tags) {
+            let user = "";
+            if (t.user) {
+                user = "user";
+            } 
+
+            html += `<div class="clickable-tag ${user}">
+                <div class="clickable-tag-tag">${t.tag}</div>
+                <div class="clickable-tag-occurance">${t.occurance}</div>
+            </div>`;
+        }
+        this.acTagsListEl.innerHTML = html;
     }
 
     setSuperpositionInfoWindowContent(what) {
@@ -897,6 +916,7 @@ export class Penefiles {
             }, false);
             this.presentedFiles = files;
             this.setFileListContent(getFileList(files));
+            this.setCompletionListContent(this.acTagsList);
             return;
         }
         query = query.replace("/", "");
@@ -968,12 +988,23 @@ export class Penefiles {
         });
         this.presentedFiles = arr;
         this.setFileListContent(getFileList(arr));
+        this.setCompletionListContent(this.acTagsList);
 
         let end = new Date();
         console.log("quick search profile: ", (end - begin) / 1000.0, "s");
     }
 
-    // TODO TODO
+    doShowCompletion(event) {
+        const target = event.target;
+        this.completionWindowEl.style.left = `${target.offsetLeft}px`;
+        this.completionWindowEl.style.bottom = `${window.innerHeight - target.offsetTop}px`;
+        this.completionWindowEl.classList.remove("hidden");
+    }
+
+    doHideCompletion() {
+        this.completionWindowEl.classList.add("hidden");
+    }
+
     updateOne(req) {
         return fetch(`${API}/files/update`, {
             method: "POST",
@@ -1725,6 +1756,7 @@ export function sql(query, binds, once) {
 
 function getFileList(files) {
     let ret = ``;
+    let allTags = [];
     
     for (const f of files) {
         let userTag = sql(session.queries.findUserTagOfFile, { ":id": f.id }, false);
@@ -1736,6 +1768,20 @@ function getFileList(files) {
             for (const u of userTag) {
                 if (tag.tag == u.tag) {
                     tagHTML += `<div class="user tag">${tag.tag}</div>`;
+
+                    const foundTag = allTags.find(pred => {
+                        return pred.tag == tag.tag;
+                    });
+                    if (!foundTag) {
+                        allTags.push({
+                            tag: tag.tag,
+                            user: true,
+                            occurance: 1
+                        });
+                    } else {
+                        foundTag.occurance++;
+                    }
+                    
                     isUserTag = true;
                     break;
                 }
@@ -1744,6 +1790,19 @@ function getFileList(files) {
                 continue;
             }
             tagHTML += `<div class="tag">${tag.tag}</div>`;
+            
+            const foundTag = allTags.find(pred => {
+                return pred.tag == tag.tag;
+            });
+            if (!foundTag) {
+                allTags.push({
+                    tag: tag.tag,
+                    user: false,
+                    occurance: 1
+                });
+            } else {
+                foundTag.occurance++;
+            }
         }
 
         let selected = "";
@@ -1776,6 +1835,8 @@ function getFileList(files) {
             </div>
         </div>`
     }
+
+    session.acTagsList = allTags;
     return ret;
 }
 
