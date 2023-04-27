@@ -55,7 +55,6 @@ html {
 }
 
 .file-list {
-    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -174,7 +173,7 @@ html {
     margin-right: 0.2em;
     margin-bottom: 3px;
     border-radius: 8px;
-    background-color: rgb(5, 145, 232);
+    background-color: rgb(2, 142, 241);
     align-items: center;
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
@@ -189,12 +188,12 @@ html {
 
 .clickable-tag-tag {
     border-radius: 8px;
-    background-color: rgb(207, 233, 249);
+    background-color: rgb(227, 238, 250);
     padding: 1px 5px;
 }
 
 .clickable-tag.user > .clickable-tag-tag {
-    background-color: rgb(252, 234, 213);
+    background-color: rgb(247, 235, 224);
 }
 
 .clickable-tag-occurance {
