@@ -171,13 +171,14 @@ html {
 .clickable-tag {
     display: inline-flex;
     font-size: 0.8em;
-    margin-right: 0.5em;
-    margin-bottom: 5px;
+    margin-right: 0.2em;
+    margin-bottom: 3px;
     border-radius: 8px;
     background-color: rgb(5, 145, 232);
     align-items: center;
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
+    box-shadow: 1px 1px 3px 1px #00000022;
     cursor: pointer;
 }
 
