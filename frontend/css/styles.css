@@ -57,6 +57,7 @@ html {
 .file-list {
     overflow-y: auto;
     overflow-x: hidden;
+    flex: 1;
 }
 
 .bottom-bar {
