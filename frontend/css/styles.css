@@ -158,9 +158,9 @@ html {
     font-size: 0.8em;
     margin-right: 0.2em;
     margin-bottom: 2px;
-    padding: 0 3px;
+    padding: 0 5px;
     font-weight: bold;
-    border-radius: 5px;
+    border-radius: 8px;
 }
 
 .user {
@@ -223,6 +223,7 @@ html {
     background-color: unset;
     border: unset;
     padding: 0;
+    box-shadow: unset;
 }
 
 .has-preview {
