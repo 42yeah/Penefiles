@@ -177,7 +177,7 @@ oatpp::Object<ResponseDto> PenefilesService::create_file(const oatpp::Object<Fil
 {
     const std::lock_guard<std::mutex> guardian(mu);
 
-    auto res = database->create_file(dto->filename, dto->realfile, dto->size);
+    auto res = database->create_file(dto->filename, dto->realfile, dto->size, 0);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
     int id = oatpp::sqlite::Utils::getLastInsertRowId(res->getConnection());
@@ -229,7 +229,7 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
     }
     OATPP_ASSERT_HTTP(should_update, Status::CODE_500, "You do not own this file.");
 
-    res = database->update_file(file->id, dto->filename);
+    res = database->update_file(file->id, dto->filename, dto->confidentiality);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
     std::vector<std::string> tags_to_add;
@@ -347,11 +347,22 @@ oatpp::Object<ResponseDto> PenefilesService::untag_file(const oatpp::Object<File
     return response;
 }
 
-oatpp::Object<DataDto<oatpp::Object<FileDto> > > PenefilesService::list_files()
+oatpp::Object<DataDto<oatpp::Object<FileDto> > > PenefilesService::list_files(std::string token)
 {
     const std::lock_guard<std::mutex> guardian(mu);
 
-    auto res = database->list_files();
+    std::shared_ptr<oatpp::orm::QueryResult> res = nullptr;
+    if (token == "")
+    {
+        res = database->list_files();
+    }
+    else
+    {
+        OATPP_ASSERT_HTTP(authenticate(token), Status::CODE_500, "Not logged in.");
+        auto user = user_sessions[token];
+        res = database->list_files_authed(user->username);
+    }
+
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     // OATPP_ASSERT_HTTP(res->hasMoreToFetch(), Status::CODE_500, "No files found");
 
@@ -362,6 +373,8 @@ oatpp::Object<DataDto<oatpp::Object<FileDto> > > PenefilesService::list_files()
     ret->count = files->size();
     ret->items = files;
     return ret;
+
+    
 }
 
 oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > PenefilesService::list_files_tags()
@@ -453,7 +466,7 @@ oatpp::Object<ResponseDto> PenefilesService::create_note(const oatpp::Object<Aut
     writer << dto->content->c_str();
     writer.close();
 
-    auto res = database->create_file(dto->filename, realfile, dto->content->size());
+    auto res = database->create_file(dto->filename, realfile, dto->content->size(), dto->confidentiality);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
     int id = oatpp::sqlite::Utils::getLastInsertRowId(res->getConnection());
 
@@ -479,6 +492,7 @@ oatpp::Object<ResponseDto> PenefilesService::update_note(const oatpp::Object<Aut
     update_dto->realfile = dto->realfile;
     update_dto->session = dto->session;
     update_dto->tags = dto->tags;
+    update_dto->confidentiality = dto->confidentiality;
     update_file(update_dto);
 
     const std::lock_guard<std::mutex> guardian(mu);

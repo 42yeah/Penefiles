@@ -149,17 +149,16 @@ export class Penefiles {
         
         let dbExec = `CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, tags TEXT);
             CREATE TABLE files_tags (fileid INTEGER, tag TEXT, UNIQUE(fileid, tag));
-            CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, realfile TEXT UNIQUE, created_at DEFAULT CURRENT_TIMESTAMP, modified_at DEFAULT CURRENT_TIMESTAMP, size INTEGER);`;
+            CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, realfile TEXT UNIQUE, created_at DEFAULT CURRENT_TIMESTAMP, modified_at DEFAULT CURRENT_TIMESTAMP, size INTEGER, confidentiality INTEGER);`;
         this.db.run(dbExec);
         this.generateQueries();
     }
 
     generateQueries() {
         this.queries = {
-            createFile: this.db.prepare("INSERT INTO files (id, filename, realfile, created_at, modified_at, size) VALUES (:id, :filename, :realfile, :created_at, :modified_at, :size);"),
+            createFile: this.db.prepare("INSERT INTO files (id, filename, realfile, created_at, modified_at, size, confidentiality) VALUES (:id, :filename, :realfile, :created_at, :modified_at, :size, :confidentiality);"),
             listFiles: this.db.prepare("SELECT * FROM files;"),
             subQueries: {},
-            updateFile: this.db.prepare("UPDATE files SET filename=:filename WHERE id=:id;"),
             deleteFile: this.db.prepare("DELETE FROM files WHERE id=:id;"),
             cleanupFileTags: this.db.prepare("DELETE FROM files_tags WHERE fileid=:id;"),
             bindTagToFile: this.db.prepare("INSERT INTO files_tags (fileid, tag) VALUES (:fileid, :tag);"),
@@ -246,7 +245,8 @@ export class Penefiles {
                 ":realfile": f.realfile,
                 ":created_at": f.created_at,
                 ":modified_at": f.modified_at,
-                ":size": f.size
+                ":size": f.size,
+                ":confidentiality": f.confidentiality
             };
             this.queries.createFile.run(dict);
         }
@@ -502,6 +502,9 @@ export class Penefiles {
         let filename = `新笔记 ${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}.md`;
         let tags = `${this.username} Note`;
         this.setInfoPaneContent(getCreateNotes(filename, tags));
+        this.publicEl = document.querySelector("#public");
+        this.unlistedEl = document.querySelector("#unlisted");
+        this.confidentialEl = document.querySelector("#confidential");
         this.notesAreaContainerEl = document.querySelector(".notes-area-container");
         this.notesCM = createCodeMirror(this.notesAreaContainerEl);
         this.tagsInputEl = document.querySelector("#tags-input");
@@ -538,9 +541,12 @@ export class Penefiles {
             tagsStr += t.tag + " ";
         }
 
-        this.setInfoPaneContent(getModifyNotes(f[0].filename, tagsStr));
+        this.setInfoPaneContent(getModifyNotes(f[0].filename, tagsStr, f[0].confidentiality));
         this.notesAreaContainerEl = document.querySelector(".notes-area-container");
         this.notesCM = createCodeMirror(this.notesAreaContainerEl);
+        this.publicEl = document.querySelector("#public");
+        this.unlistedEl = document.querySelector("#unlisted");
+        this.confidentialEl = document.querySelector("#confidential");
         this.tagsInputEl = document.querySelector("#tags-input");
         this.fileNameInputEl = document.querySelector("#file-name-input");
         
@@ -567,12 +573,14 @@ export class Penefiles {
         let tags = this.tagsInputEl.value.trim().split(" ");
         let content = this.notesCM.state.doc.toString();
         let session = this.session;
+        let level = this.publicEl.checked ? 0 : this.unlistedEl.checked ? 1 : 2;
         this.notesCM = null;
         let req = {
             filename,
             tags,
             session,
-            content
+            content,
+            confidentiality: level
         };
 
         fetch(`${API}/notes/create`, {
@@ -621,12 +629,14 @@ export class Penefiles {
         this.notesCM = null;
         let session = this.session;
         let realfile = f[0].realfile.split("/")[1];
+        let level = this.publicEl.checked ? 0 : this.unlistedEl.checked ? 1 : 2;
         let req = {
             filename,
             tags,
             session,
             content,
-            realfile
+            realfile,
+            confidentiality: level
         };
         fetch(`${API}/notes/update`, {
             method: "POST",
@@ -740,11 +750,13 @@ export class Penefiles {
             this.message("错误：无法找到要修改的文件。", "PENEfiles 状态机估计出了某些问题。");
             return;
         }
+        let level = this.publicEl.checked ? 0 : this.unlistedEl.checked ? 1 : 2;
         const req = {
             session: this.session,
             filename: this.fileNameInputEl.value,
             realfile: f[0].realfile.split("/")[1],
-            tags: []
+            tags: [],
+            confidentiality: level
         };
         let tagsInputValue = this.tagsInputEl.value.trim();
         let tags = tagsInputValue.split(" ");
@@ -842,7 +854,7 @@ export class Penefiles {
                     this.session = json.message;
                     this.onlyShowMine = 1;
                     this.personalInfo();
-                    this.doQuickSearch();
+                    this.doRefresh();
                     this.updateTopOperations();
                 }
             } catch (e) {
@@ -863,7 +875,7 @@ export class Penefiles {
         this.updateTopOperations();
         this.dumpVariables();
         this.login();
-        this.doQuickSearch();
+        this.doRefresh();
     }
 
     doRegister() {
@@ -1041,9 +1053,14 @@ export class Penefiles {
 
         return new Promise((resolve, reject) => {
             let allFour = 0;
+            let headers = {};
+            if (this.session) {
+                headers["Authorization"] = `Bearer ${this.session}`;
+            }
 
             fetch(`${API}/files`, {
-                method: "GET"
+                method: "GET",
+                headers: headers
             }).then(res => {
                 return res.json();
             }).then(json => {
@@ -1164,12 +1181,20 @@ export class Penefiles {
             reqTags.push(tr);
         }
 
+        let confidentiality = 0;
+        if (this.unlistedEl.checked) {
+            confidentiality = 1;
+        } else if (this.confidentialEl.checked) {
+            confidentiality = 2;
+        }
+
         for (let i = 0; i < toUpdate; i++) {
             const req = {
                 session: this.session,
                 filename: this.multiSelect[i].filename,
                 realfile: this.multiSelect[i].realfile.split("/")[1],
-                tags: reqTags
+                tags: reqTags,
+                confidentiality: confidentiality
             };
 
             this.updateOne(req).catch(e => {
@@ -1449,6 +1474,9 @@ export class Penefiles {
 
                 this.setInfoPaneContent(getMultiselect(this.multiSelect));
                 this.tagsInputEl = document.querySelector("#tags-input");
+                this.publicEl = document.querySelector("#public");
+                this.unlistedEl = document.querySelector("#unlisted");
+                this.confidentialEl = document.querySelector("#confidential");
                 if (window.innerWidth > 645) {
                     this.tagsInputEl.focus();
                     this.tagsInputEl.selectionStart = this.tagsInputEl.value.length;
@@ -1508,6 +1536,10 @@ export class Penefiles {
                 this.neutral();
             } else {
                 this.setInfoPaneContent(getMultiselect(this.multiSelect));
+                this.tagsInputEl = document.querySelector("#tags-input");
+                this.publicEl = document.querySelector("#public");
+                this.unlistedEl = document.querySelector("#unlisted");
+                this.confidentialEl = document.querySelector("#confidential");
             }
 
             return;
@@ -1536,6 +1568,9 @@ export class Penefiles {
         this.fileNameInputEl = document.querySelector("#file-name-input");
         this.tagsInputEl = document.querySelector("#tags-input");
         this.fileUrlEl = document.querySelector("#file-url");
+        this.publicEl = document.querySelector("#public");
+        this.unlistedEl = document.querySelector("#unlisted");
+        this.confidentialEl = document.querySelector("#confidential");
 
         if (window.innerWidth > 645 && this.tagsInputEl) {
             this.tagsInputEl.focus();
@@ -1837,11 +1872,23 @@ function getFileList(files) {
             selected = "selected";
         }
 
+        let confidentiality = ``;
+        if (f.confidentiality == 1) {
+            confidentiality = `
+                <img src="assets/package.svg" class="file-name-lock">
+            `;
+        } else if (f.confidentiality == 2) {
+            confidentiality = `
+                <img src="assets/lock.svg" class="file-name-lock">
+            `;
+        }
+
         ret += `
         <div id="file-entry-${f.id}" onclick="session.fileInfo(${f.id}, event)" class="file-entry controls ${selected}">
             <div class="file-info">
                 <div class="file-name">
-                    ${f.filename}
+                    ${confidentiality} 
+                    <span class="file-name-text">${f.filename}</span>
                 </div>
                 <div class="tags">
                     <div class="invisible tag">
@@ -2132,9 +2179,20 @@ export function getFileInfo(f) {
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有</div>
+            <div class="info-pane-label">私有等级</div>
             <div class="info-pane-checkbox">
-                <input class="controls" type="checkbox">
+                <label for="public" class="radio-option controls">
+                    <input ${f.confidentiality == 0 ? `checked="checked"` : ""} onchange="session.doUpdate()" class="controls" type="radio" id="public" name="confidentiality">
+                    <span>公开</span>
+                </div>
+                <label for="unlisted" class="radio-option controls">
+                    <input ${f.confidentiality == 1 ? `checked="checked"` : ""} onchange="session.doUpdate()" class="controls" type="radio" id="unlisted" name="confidentiality">
+                    <span>不列出</span>
+                </label>
+                <label for="confidential" class="radio-option controls">
+                    <input ${f.confidentiality == 2 ? `checked="checked"` : ""} onchange="session.doUpdate()" class="controls" type="radio" id="confidential" name="confidentiality">
+                    <span>私有</span>
+                </div>
             </div>
         </div>
     </div>
@@ -2199,9 +2257,20 @@ function getMultiselect(selections) {
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有</div>
+            <div class="info-pane-label">私有等级</div>
             <div class="info-pane-checkbox">
-                <input class="controls" type="checkbox">
+                <label for="public" class="radio-option controls">
+                    <input class="controls" type="radio" id="public" name="confidentiality">
+                    <span>公开</span>
+                </div>
+                <label for="unlisted" class="radio-option controls">
+                    <input class="controls" type="radio" id="unlisted" name="confidentiality">
+                    <span>不列出</span>
+                </label>
+                <label for="confidential" class="radio-option controls">
+                    <input class="controls" type="radio" id="confidential" name="confidentiality">
+                    <span>私有</span>
+                </div>
             </div>
         </div>
     </div>
@@ -2223,9 +2292,20 @@ function getCreateNotes(filename, tags) {
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有</div>
+            <div class="info-pane-label">私有等级</div>
             <div class="info-pane-checkbox">
-                <input class="controls" type="checkbox">
+                <label for="public" class="radio-option controls">
+                    <input checked="checked" class="controls" type="radio" id="public" name="confidentiality">
+                    <span>公开</span>
+                </div>
+                <label for="unlisted" class="radio-option controls">
+                    <input class="controls" type="radio" id="unlisted" name="confidentiality">
+                    <span>不列出</span>
+                </label>
+                <label for="confidential" class="radio-option controls">
+                    <input class="controls" type="radio" id="confidential" name="confidentiality">
+                    <span>私有</span>
+                </div>
             </div>
         </div>
     </div>
@@ -2242,7 +2322,7 @@ function getCreateNotes(filename, tags) {
     </div>`;
 }
 
-function getModifyNotes(filename, tags) {
+function getModifyNotes(filename, tags, confidentiality) {
     return `<div class="info-pane-operations">
         <div class="info-pane-pairs">
             <div class="info-pane-label">文件名</div>
@@ -2257,9 +2337,20 @@ function getModifyNotes(filename, tags) {
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有</div>
+            <div class="info-pane-label">私有等级</div>
             <div class="info-pane-checkbox">
-                <input class="controls" type="checkbox">
+                <label for="public" class="radio-option controls">
+                    <input ${confidentiality == 0 ? `checked="checked"` : ""} class="controls" type="radio" id="public" name="confidentiality">
+                    <span>公开</span>
+                </div>
+                <label for="unlisted" class="radio-option controls">
+                    <input ${confidentiality == 1 ? `checked="checked"` : ""} class="controls" type="radio" id="unlisted" name="confidentiality">
+                    <span>不列出</span>
+                </label>
+                <label for="confidential" class="radio-option controls">
+                    <input ${confidentiality == 2 ? `checked="checked"` : ""} class="controls" type="radio" id="confidential" name="confidentiality">
+                    <span>私有</span>
+                </div>
             </div>
         </div>
     </div>

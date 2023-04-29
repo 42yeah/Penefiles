@@ -87,15 +87,17 @@ public:
     // File manipulation
     //
     QUERY(create_file,
-          "INSERT INTO files (filename, realfile, size) VALUES (:filename, :realfile, :size);",
+          "INSERT INTO files (filename, realfile, size, confidentiality) VALUES (:filename, :realfile, :size, :confidentiality);",
           PARAM(oatpp::String, filename),
           PARAM(oatpp::String, realfile),
-          PARAM(oatpp::Int32, size));
+          PARAM(oatpp::Int32, size),
+          PARAM(oatpp::Int32, confidentiality));
 
     QUERY(update_file,
-          "UPDATE files SET filename=:filename WHERE id=:id;",
+          "UPDATE files SET filename=:filename, confidentiality=:confidentiality WHERE id=:id;",
           PARAM(oatpp::Int32, id),
-          PARAM(oatpp::String, filename));
+          PARAM(oatpp::String, filename),
+          PARAM(oatpp::Int32, confidentiality));
 
     QUERY(delete_file,
           "DELETE FROM files WHERE id=:id;",
@@ -106,7 +108,11 @@ public:
           PARAM(oatpp::Int32, id));
 
     QUERY(list_files,
-          "SELECT * FROM files");
+          "SELECT * FROM files WHERE confidentiality=0;");
+
+    QUERY(list_files_authed,
+          "SELECT DISTINCT id, files.* FROM files INNER JOIN files_tags WHERE fileid=id AND (confidentiality=0 OR tag=:user);",
+          PARAM(oatpp::String, user));
 
     QUERY(get_file_from_realfile,
           "SELECT * FROM files WHERE realfile=:realfile",

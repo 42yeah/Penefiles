@@ -67,6 +67,7 @@ class FileDto : public oatpp::DTO
     DTO_FIELD(String, realfile);
     DTO_FIELD(String, created_at);
     DTO_FIELD(String, modified_at);
+    DTO_FIELD(Int32, confidentiality);
     DTO_FIELD(Int32, size);
 };
 
@@ -92,6 +93,7 @@ class AuthFileUpdateDto : public oatpp::DTO
     DTO_FIELD(String, session);
     DTO_FIELD(String, realfile);
     DTO_FIELD(String, filename);
+    DTO_FIELD(Int32, confidentiality);
     DTO_FIELD(Vector<String>, tags);
 };
 
@@ -103,6 +105,7 @@ class AuthNoteUpdateDto : public oatpp::DTO
     DTO_FIELD(String, realfile);
     DTO_FIELD(String, filename);
     DTO_FIELD(String, content);
+    DTO_FIELD(Int32, confidentiality);
     DTO_FIELD(Vector<String>, tags);
 };
 

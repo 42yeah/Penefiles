@@ -44,7 +44,7 @@ public:
     oatpp::Object<ResponseDto> update_note(const oatpp::Object<AuthNoteUpdateDto> &dto);
 
     oatpp::Object<DataDto<oatpp::Object<UserDto> > > list_users();
-    oatpp::Object<DataDto<oatpp::Object<FileDto> > > list_files();
+    oatpp::Object<DataDto<oatpp::Object<FileDto> > > list_files(std::string token);
     oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > list_files_tags();
     oatpp::Object<DataDto<oatpp::Object<TagDto> > > list_tags();
 

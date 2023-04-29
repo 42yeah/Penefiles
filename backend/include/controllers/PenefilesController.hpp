@@ -86,9 +86,22 @@ public:
         return createDtoResponse(Status::CODE_200, res);
     }
 
-    ENDPOINT("GET", "/files", files)
+    ENDPOINT("GET", "/files", files,
+        REQUEST(std::shared_ptr<IncomingRequest>, request))
     {
-        return createDtoResponse(Status::CODE_200, penefiles_service.list_files());
+        auto authorization = request->getHeader("Authorization");
+        std::string token = "";
+
+        if (authorization && authorization->size() > 7)
+        {
+            token = authorization->substr(7);
+            if (!penefiles_service.authenticate(token))
+            {
+                token = "";
+            }
+        }
+
+        return createDtoResponse(Status::CODE_200, penefiles_service.list_files(token));
     }
 
     ENDPOINT("GET", "/tags", tags)

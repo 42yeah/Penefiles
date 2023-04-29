@@ -122,7 +122,20 @@ html {
     padding-top: 5px;
     white-space: nowrap;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.file-name-text {
     text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.file-name-lock {
+    max-height: 1em;
+    min-height: 1em;
+    image-rendering: pixelated;
+    padding-right: 5px;
 }
 
 .file-name-title {
@@ -367,6 +380,12 @@ html {
     padding: 2.5px 0;
 }
 
+.info-pane-pairs-align-start {
+    display: flex;
+    align-items: start;
+    padding: 2.5px 0;
+}
+
 .info-pane-label {
     color: #333;
     font-weight: bold;
@@ -409,6 +428,17 @@ html {
     padding: 5px;
     display: inline-grid;
     grid-template-columns: 100px auto;
+}
+
+.info-pane-checkbox {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.radio-option {
+    margin-right: 5px;
+    padding: 0 5px;
+    border: 1px solid #aaa;
 }
 
 .container-center {
@@ -743,11 +773,16 @@ mjx-container {
 @media screen and (max-width: 450px) {
     .tag {
         margin-right: 0;
-        margin-left: -10px;
+        margin-left: -12px;
         max-width: 30px;
         overflow: hidden;
         box-shadow: -3px 0 3px #00000022;
         background-color: rgb(227, 238, 250);
+    }
+
+    .tag:last-of-type {
+        max-width: 50px;
+        text-overflow: ellipsis;
     }
 
     .user {
