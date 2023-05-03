@@ -1422,9 +1422,13 @@ export class Penefiles {
             const tags = sql(this.queries.findTagsOfFile, { ":id": id }, false);
             let inserted = `[[${f[0].realfile}]]`;
             if (tags.find(pred => {
-                return pred.tag == "Note"
+                return pred.tag == "Note";
             })) {
                 inserted = `((${f[0].id}))`;
+            } else if (tags.find(pred => {
+                return pred.tag == "Image";
+            })) {
+                inserted = `![[${f[0].realfile}]]`;
             }
 
             let transaction = this.notesCM.state.update({
@@ -1589,9 +1593,12 @@ export class Penefiles {
             }
         }
         let thisSelectedEntry = document.querySelector("#file-entry-" + id);
-        
         this.lastSelectedID = id;
-        thisSelectedEntry.classList.add("selected");
+
+        if (thisSelectedEntry) {
+            thisSelectedEntry.classList.add("selected");
+        }
+        
         this.dumpVariables();
     }
     
@@ -2082,7 +2089,7 @@ export function getFileInfo(f) {
                 `);
             }
             
-            let attachmentRegex = /\[\[(.+)\]\]/g;
+            let attachmentRegex = /\!?\[\[(.+)\]\]/g;
             matches = [...parsed.matchAll(attachmentRegex)];
             for (const m of matches) {
                 const f = sql(session.queries.getFileFromRealfile, { ":realfile": m[1] }, true);
@@ -2094,12 +2101,20 @@ export function getFileInfo(f) {
                     filename = f[0].filename;
                     href = `${API}/${m[1]}/${filename}`;
                 }
-                parsed = parsed.replace(m[0], `
-                    <a href="${href}" class="controls note-crossref">
-                        <img src="assets/attach.svg" class="icon-controls">
-                        <span class="crossref-label">${filename}</span>
-                    </a>
-                `);
+                let isImage = m[0].startsWith("!");
+                if (!isImage) {
+                    parsed = parsed.replace(m[0], `
+                        <a href="${href}" class="controls note-crossref">
+                            <img src="assets/attach.svg" class="icon-controls">
+                            <span class="crossref-label">${filename}</span>
+                        </a>
+                    `);
+                } else {
+                    parsed = parsed.replace(m[0], `
+                        <a href="${href}"><img src="${href}" alt="${filename}"></a>
+                    `);
+                }
+                
             }
 
             preview.innerHTML = parsed;
