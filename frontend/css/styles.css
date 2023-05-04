@@ -27,6 +27,8 @@ html {
     border-bottom: 1px solid #aaa;
     padding: 5px;
     display: flex;
+    background-color: rgb(221, 221, 221);
+    box-shadow: 0 2px 5px 0 rgb(221, 221, 221);
 }
 
 .site-title {
@@ -58,6 +60,8 @@ html {
     overflow-y: auto;
     overflow-x: hidden;
     flex: 1;
+    box-shadow: 0 2px 5px 0 rgb(221, 221, 221);
+    z-index: 1;
 }
 
 .bottom-bar {
@@ -91,6 +95,14 @@ html {
 
 .controls:active {
     background-color: #aaa;
+}
+
+.controls.control-button:hover {
+    background: linear-gradient(0deg, rgb(230, 230, 230), rgb(242, 242, 242));
+}
+
+.controls.control-button:active {
+    background: linear-gradient(180deg, rgb(212, 212, 212), rgb(230, 230, 230));
 }
 
 .quick-notes, .files-upload {
@@ -155,7 +167,7 @@ html {
 }
 
 .selected {
-    background-color: rgb(2, 81, 228);
+    background: linear-gradient(180deg, rgb(2, 95, 241), rgb(2, 81, 228));
     color: white;
 }
 
@@ -270,17 +282,19 @@ html {
     user-select: none;
     border: 1px solid #aaa;
     padding: 1px 3px;
+    border-radius: 1px;
     font-size: 0.9em;
-    box-shadow: 0 2px 0 0 #aaa;
-    font-weight: bold;
+    box-shadow: 0 1px 0 0 rgba(232, 232, 232);
     margin-right: 3px;
     color: black;
     text-decoration: none;
+    background: linear-gradient(0deg, rgb(235, 235, 235), rgb(254, 254, 254));
 }
 
 .control-button:active {
     box-shadow: unset;
-    transform: translateY(2px);
+    background: linear-gradient(180deg, rgb(235, 235, 235), rgb(254, 254, 254));
+    transform: translateY(1px);
 }
 
 .with-icon {
@@ -306,6 +320,7 @@ html {
     flex: 1;
     display: flex;
     flex-direction: column;
+    background: linear-gradient(180deg, rgb(240, 240, 240), rgb(254, 254, 254));
 }
 
 .big-image-preview {
@@ -338,10 +353,11 @@ html {
 }
 
 .file-operations {
-    padding: 5px;
     display: flex;
-    border: 1px solid #aaa;
-    background-color: white;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    /* border: 1px solid #aaa;
+    background-color: white; */
 }
 
 .sticky {
@@ -488,7 +504,7 @@ html {
 }
 
 .completion-window {
-    background-color: white;
+    background-color: rgb(240, 240, 240);
     border: 1px solid #aaa;
     border-right: 0;
     border-left: 0;
@@ -707,6 +723,7 @@ mjx-container {
     padding: 0 5px;
     text-decoration: none;
     color: #111;
+    background-color: #fefefe;
 }
 
 .crossref-label {
