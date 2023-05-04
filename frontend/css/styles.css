@@ -387,6 +387,7 @@ html {
 
 .info-pane-operations {
     border: 1px solid #aaa;
+    border-radius: 2px;
     padding: 5px;
 }
 
@@ -441,6 +442,7 @@ html {
 
 .info-pane-table {
     border: 1px solid #aaa;
+    border-radius: 2px;
     padding: 5px;
     display: inline-grid;
     grid-template-columns: 100px auto;
@@ -455,6 +457,7 @@ html {
     margin-right: 5px;
     padding: 0 5px;
     border: 1px solid #aaa;
+    border-radius: 2px;
 }
 
 .container-center {
