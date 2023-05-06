@@ -94,7 +94,7 @@ export class Penefiles {
         });
         this.infoPaneHandleEl.addEventListener("touchstart", e => {
             this.infoPaneResizing = true;
-            this.infoPaneResize(e.touches[0].clientX);
+            this.infoPaneResize(e.touches[0].clientY);
             e.preventDefault();
         });
         window.addEventListener("touchmove", e => {
