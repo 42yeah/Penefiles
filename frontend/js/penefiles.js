@@ -13,6 +13,9 @@ export class Penefiles {
         // Element finders
         this.fileListEl = document.querySelector(".file-list");
         this.infoPaneEl = document.querySelector(".info-pane");
+        this.filesPaneEl = document.querySelector(".files-pane");
+        this.topBarEl = document.querySelector(".top-bar");
+        this.bottomBarEl = document.querySelector(".bottom-bar");
         this.superPositionInfoWindowEl = document.querySelector(".superposition-info-window");
         this.superPositionFileQueueWindowEl = document.querySelector(".superposition-file-queue-window");
         this.loginTopControlEl = document.querySelector("#login-top-control");
@@ -56,7 +59,8 @@ export class Penefiles {
         this.sortByName = 0;
         this.onlyShowMine = 0;
         this.infoPaneResizing = false;
-        this.infoPaneHeight = 50;
+        this.infoPaneHeight = 100;
+        this.heightOffset = 0;
         this.pdfTask = null;
 
         // Data
@@ -76,6 +80,7 @@ export class Penefiles {
         // Register resize
         this.infoPaneHandleEl.addEventListener("mousedown", e => {
             this.infoPaneResizing = true;
+            this.heightOffset = e.clientY - this.topBarEl.clientHeight - this.infoPaneContainerEl.clientHeight;
             this.infoPaneResize(e.clientY);
             e.preventDefault();
         });
@@ -95,6 +100,7 @@ export class Penefiles {
         this.infoPaneHandleEl.addEventListener("touchstart", e => {
             this.infoPaneResizing = true;
             this.infoPaneResize(e.touches[0].clientY);
+            this.heightOffset = e.touches[0].clientY - this.topBarEl.clientHeight - this.infoPaneContainerEl.clientHeight;
             e.preventDefault();
         });
         window.addEventListener("touchmove", e => {
@@ -114,15 +120,28 @@ export class Penefiles {
 
     infoPaneResize(y) {
         // Calculate relative position to the window (in vh)
-        let vh = y / window.innerHeight;
-        if (vh > 0.8) {
-            vh = 0.8;
+
+        // let vh = y / window.innerHeight;
+        // if (vh > 0.8) {
+        //     vh = 0.8;
+        // }
+        // if (vh < 0.1) {
+        //     vh = 0.1;
+        // }
+
+        let height = (y - this.heightOffset) - this.topBarEl.clientHeight;
+        let bottomPart = this.completionWindowEl.clientHeight + this.bottomBarEl.clientHeight;
+        if (height + this.topBarEl.clientHeight + bottomPart > window.innerHeight) {
+            height = window.innerHeight - this.topBarEl.clientHeight - bottomPart - 1;
+        } else if (height < 100) {
+            height = 100;
         }
-        if (vh < 0.1) {
-            vh = 0.1;
-        }
-        this.infoPaneContainerEl.style.minHeight = `calc(${vh * 100.0}vh - 39px)`;
-        this.infoPaneContainerEl.style.maxHeight = `calc(${vh * 100.0}vh - 39px)`;
+
+        // Rule #1: height must not disintegrate.
+        // Rule #2: height must not cover tag list and quick access.
+
+        this.infoPaneContainerEl.style.minHeight = `${height}px`;
+        this.infoPaneContainerEl.style.maxHeight = `${height}px`;
     }
 
     dumpVariables() {
