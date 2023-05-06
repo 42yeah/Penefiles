@@ -564,7 +564,7 @@ html {
 
 /* CodeMirror */
 .cm-editor .cm-content {
-    font-family: "SF Mono", "Consolas", 'Courier New', Courier, monospace;
+    font-family: "SF Mono", "Menlo", "Roboto Mono", "Consolas", 'Courier New', Courier, monospace;
     white-space: pre-wrap;
 }
 
