@@ -114,6 +114,11 @@ mjx-container {
     overflow-x: auto;
 }
 
+.markdown-preview img {
+    max-width: 100%;
+    max-height: 50vh;
+}
+
 .note-crossref {
     display: inline-flex;
     align-items: center;
