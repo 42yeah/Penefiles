@@ -31,6 +31,8 @@ export class Penefiles {
         this.onlyShowMineEl = document.querySelector("#only-show-mine");
         this.completionWindowEl = document.querySelector(".completion-window");
         this.acTagsListEl = document.querySelector(".ac-tags-list");
+        this.infoPaneContainerEl = document.querySelector(".info-pane-container");
+        this.infoPaneHandleEl = document.querySelector(".info-pane-handle");
         this.acTagsList = [];
         this.headless = headless;
     
@@ -53,6 +55,8 @@ export class Penefiles {
         this.sortByDate = 0;
         this.sortByName = 0;
         this.onlyShowMine = 0;
+        this.infoPaneResizing = false;
+        this.infoPaneHeight = 50;
         this.pdfTask = null;
 
         // Data
@@ -68,6 +72,57 @@ export class Penefiles {
         
         this.loadVariables();
         this.updateTopOperations();
+
+        // Register resize
+        this.infoPaneHandleEl.addEventListener("mousedown", e => {
+            this.infoPaneResizing = true;
+            this.infoPaneResize(e.clientY);
+            e.preventDefault();
+        });
+        window.addEventListener("mousemove", e => {
+            if (this.infoPaneResizing) {
+                this.infoPaneResize(e.clientY);
+                e.preventDefault();
+            }
+        });
+        window.addEventListener("mouseup", e => {
+            if (this.infoPaneResizing) {
+                this.infoPaneResizing = false;
+                this.infoPaneResize(e.clientY);
+                e.preventDefault();
+            }
+        });
+        this.infoPaneHandleEl.addEventListener("touchstart", e => {
+            this.infoPaneResizing = true;
+            this.infoPaneResize(e.touches[0].clientX);
+            e.preventDefault();
+        });
+        window.addEventListener("touchmove", e => {
+            if (this.infoPaneResizing) {
+                this.infoPaneResize(e.touches[0].clientY);
+                e.preventDefault();
+            }
+        });
+        window.addEventListener("touchend", e => {
+            if (this.infoPaneResizing) {
+                this.infoPaneResizing = false;
+                this.infoPaneResize(e.touches[0].clientY);
+                e.preventDefault();
+            }
+        });
+    }
+
+    infoPaneResize(y) {
+        // Calculate relative position to the window (in vh)
+        let vh = y / window.innerHeight;
+        if (vh > 0.8) {
+            vh = 0.8;
+        }
+        if (vh < 0.1) {
+            vh = 0.1;
+        }
+        this.infoPaneContainerEl.style.minHeight = `calc(${vh * 100.0}vh - 39px)`;
+        this.infoPaneContainerEl.style.maxHeight = `calc(${vh * 100.0}vh - 39px)`;
     }
 
     dumpVariables() {
