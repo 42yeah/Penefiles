@@ -2143,7 +2143,9 @@ export function getFileInfo(f) {
             return res.text();
         }).then(text => {
             let preview = document.querySelector(".markdown-preview");
-            let parsed = marked.parse(text);
+            // Escape every backslash (that is NOT \n)
+            let escaped = text.replaceAll("\\", "\\\\");
+            let parsed = marked.parse(escaped);
             let crossrefsRegex = /\(\((\d+)\)\)/g;
             let matches = [...parsed.matchAll(crossrefsRegex)];
 

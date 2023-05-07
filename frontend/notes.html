@@ -15,7 +15,14 @@
     </div>
     <script src="js/notes.js" type="module"></script>
     <script src="js/sqljs-wasm/sql-wasm.js"></script>
-    <script src="/js/marked.min.js"></script>
+    <script src="/js/marked.min.js"></script>    
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: {'[+]': [['$', '$']]}
+            }
+        };
+    </script>
     <script src="/js/tex-mml-chtml.js"></script>
 </body>
 </html>
