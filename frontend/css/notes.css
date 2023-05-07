@@ -137,6 +137,18 @@ mjx-container {
     height: 20px;
 }
 
+.controls {
+    cursor: pointer;
+}
+
+.controls:hover {
+    background-color: #ccc;
+}
+
+.controls:active {
+    background-color: #aaa;
+}
+
 @media screen and (min-width: 720px) {
     .container {
         display: flex;
