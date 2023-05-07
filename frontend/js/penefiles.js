@@ -43,6 +43,46 @@ export class Penefiles {
             this.fileListEl.onscroll = (e) => {
                 this.fileListScrollTop = this.fileListEl.scrollTop;
             }
+
+            // Register resize
+            this.infoPaneHandleEl.addEventListener("mousedown", e => {
+                this.infoPaneResizing = true;
+                this.heightOffset = e.clientY - this.topBarEl.clientHeight - this.infoPaneContainerEl.clientHeight;
+                this.infoPaneResize(e.clientY);
+                e.preventDefault();
+            });
+            window.addEventListener("mousemove", e => {
+                if (this.infoPaneResizing) {
+                    this.infoPaneResize(e.clientY);
+                    e.preventDefault();
+                }
+            });
+            window.addEventListener("mouseup", e => {
+                if (this.infoPaneResizing) {
+                    this.infoPaneResizing = false;
+                    this.infoPaneResize(e.clientY);
+                    e.preventDefault();
+                }
+            });
+            this.infoPaneHandleEl.addEventListener("touchstart", e => {
+                this.infoPaneResizing = true;
+                this.infoPaneResize(e.touches[0].clientY);
+                this.heightOffset = e.touches[0].clientY - this.topBarEl.clientHeight - this.infoPaneContainerEl.clientHeight;
+                e.preventDefault();
+            });
+            window.addEventListener("touchmove", e => {
+                if (this.infoPaneResizing) {
+                    this.infoPaneResize(e.touches[0].clientY);
+                    e.preventDefault();
+                }
+            });
+            window.addEventListener("touchend", e => {
+                if (this.infoPaneResizing) {
+                    this.infoPaneResizing = false;
+                    this.infoPaneResize(e.touches[0].clientY);
+                    e.preventDefault();
+                }
+            });
         }
 
         // Variables
@@ -76,46 +116,6 @@ export class Penefiles {
         
         this.loadVariables();
         this.updateTopOperations();
-
-        // Register resize
-        this.infoPaneHandleEl.addEventListener("mousedown", e => {
-            this.infoPaneResizing = true;
-            this.heightOffset = e.clientY - this.topBarEl.clientHeight - this.infoPaneContainerEl.clientHeight;
-            this.infoPaneResize(e.clientY);
-            e.preventDefault();
-        });
-        window.addEventListener("mousemove", e => {
-            if (this.infoPaneResizing) {
-                this.infoPaneResize(e.clientY);
-                e.preventDefault();
-            }
-        });
-        window.addEventListener("mouseup", e => {
-            if (this.infoPaneResizing) {
-                this.infoPaneResizing = false;
-                this.infoPaneResize(e.clientY);
-                e.preventDefault();
-            }
-        });
-        this.infoPaneHandleEl.addEventListener("touchstart", e => {
-            this.infoPaneResizing = true;
-            this.infoPaneResize(e.touches[0].clientY);
-            this.heightOffset = e.touches[0].clientY - this.topBarEl.clientHeight - this.infoPaneContainerEl.clientHeight;
-            e.preventDefault();
-        });
-        window.addEventListener("touchmove", e => {
-            if (this.infoPaneResizing) {
-                this.infoPaneResize(e.touches[0].clientY);
-                e.preventDefault();
-            }
-        });
-        window.addEventListener("touchend", e => {
-            if (this.infoPaneResizing) {
-                this.infoPaneResizing = false;
-                this.infoPaneResize(e.touches[0].clientY);
-                e.preventDefault();
-            }
-        });
     }
 
     infoPaneResize(y) {
