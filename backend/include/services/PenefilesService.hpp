@@ -5,6 +5,8 @@
 #include <map>
 #include <random>
 #include <mutex>
+#include <thread>
+#include <condition_variable>
 #include <oatpp/web/protocol/http/Http.hpp>
 #include <oatpp/core/macro/codegen.hpp>
 #include <oatpp/core/macro/component.hpp>
@@ -19,9 +21,15 @@ private:
     OATPP_COMPONENT(std::shared_ptr<PenefilesDb>, database);
 
     std::map<std::string, oatpp::Object<UserDto> > user_sessions;
+    std::unique_ptr<std::thread> orphan_watcher_thread;
     std::mutex mu;
+    std::condition_variable cv;
+    bool running;
 
 public:
+    PenefilesService();
+    ~PenefilesService();
+
     oatpp::Object<ResponseDto> create_user(const oatpp::Object<UserRegistrationDto> &dto);
     oatpp::Object<ResponseDto> login(const oatpp::Object<UserDto> &dto);
 
@@ -48,7 +56,11 @@ public:
     oatpp::Object<DataDto<oatpp::Object<FileTagDto> > > list_files_tags();
     oatpp::Object<DataDto<oatpp::Object<TagDto> > > list_tags();
 
+    void delete_orphans_watcher();
     void create_uploads_folder_or_die();
+
+private:
+    int delete_orphans();
 };
 
 

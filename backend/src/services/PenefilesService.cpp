@@ -5,6 +5,26 @@
 #include <fstream>
 #include "filesystem.hpp"
 
+PenefilesService::PenefilesService() : running(true)
+{
+    orphan_watcher_thread = std::make_unique<std::thread>(&PenefilesService::delete_orphans_watcher, this);
+}
+
+PenefilesService::~PenefilesService()
+{
+    {
+        const std::lock_guard<std::mutex> guardian(mu);
+        running = false;
+        cv.notify_all();
+        OATPP_LOGI("PENEfiles", "Stopping server...");
+    }
+    
+    if (orphan_watcher_thread->joinable())
+    {
+        orphan_watcher_thread->join();
+    }
+}
+
 oatpp::Object<ResponseDto> PenefilesService::create_user(const oatpp::Object<UserRegistrationDto> &dto)
 {
     const std::lock_guard<std::mutex> guardian(mu);
@@ -519,4 +539,63 @@ void PenefilesService::create_uploads_folder_or_die()
     }
     stat = fs::status(uploads);
     OATPP_ASSERT_HTTP(stat.type() == fs::file_type::directory, Status::CODE_500, "PENEfiles cannot create uploads. This is a severe server side error. Please contact admin.");
+}
+
+void PenefilesService::delete_orphans_watcher()
+{
+    std::unique_lock<std::mutex> lock(mu);
+    while (running)
+    {
+        cv.wait_for(lock, std::chrono::seconds(60));
+        int orphans_removed = delete_orphans();
+
+        if (orphans_removed != 0)
+        {
+            OATPP_LOGI("PENEfiles", "Orphans removed: %d", orphans_removed);
+        }
+    };
+}
+
+int PenefilesService::delete_orphans()
+{
+    // Step 1: list files under uploads/.
+    // Step 2: for each file, see if it's in the database. 
+    // Step 3: delete everything that's not.
+    fs::path uploads("uploads");
+    auto stat = fs::status(uploads);
+    if (fs::status_known(stat) && stat.type() == fs::file_type::not_found)
+    {
+        OATPP_LOGI("PENEfiles", "Creating directory uploads/...");
+        fs::create_directory(uploads);
+    }
+
+    int orphans_removed = 0;
+    for (const auto &entry : fs::directory_iterator(uploads))
+    {
+        std::string real_file = std::string("uploads/") + entry.path().filename().string();
+        auto res = database->get_file_from_realfile(real_file);
+        if (!res->isSuccess())
+        {
+            OATPP_LOGE("PENEfiles", "Unsuccessful query: %s.", real_file.c_str());
+            continue;
+        }
+        
+        if (!res->hasMoreToFetch())
+        {
+            if (!fs::remove(entry))
+            {
+                OATPP_LOGE("PENEfiles", "Cannot remove orphan: %s.", real_file.c_str());
+            }
+            else 
+            {
+                OATPP_LOGI("PENEfiles", "Orphan %s removed.", real_file.c_str());
+                orphans_removed++;
+            }
+        }
+        else
+        {
+            res->fetch<oatpp::Vector<oatpp::Object<FileDto> > >();
+        }
+    }
+    return orphans_removed;
 }
