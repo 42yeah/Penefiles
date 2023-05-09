@@ -3,6 +3,10 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <oatpp/web/mime/multipart/FileProvider.hpp>
+#include <oatpp/web/mime/multipart/InMemoryDataProvider.hpp>
+#include <oatpp/web/mime/multipart/Reader.hpp>
+#include <oatpp/web/mime/multipart/PartList.hpp>
 #include "filesystem.hpp"
 
 PenefilesService::PenefilesService() : running(true)
@@ -193,10 +197,89 @@ std::string PenefilesService::get_tag_by_filename(const std::string &path)
     return "Unknown";
 }
 
+struct UploadEntry
+{
+    UploadEntry(PenefilesService &service, const std::string &realfile) : service(service), realfile(realfile)
+    {
+        const std::lock_guard<std::mutex> guardian(service.mu);
+
+        service.upload_entries[realfile] = true;
+    }
+
+    ~UploadEntry()
+    {
+        const std::lock_guard<std::mutex> guardian(service.mu);
+
+        if (service.upload_entries.find(realfile) != service.upload_entries.end())
+        {
+            service.upload_entries.erase(realfile);
+        }
+    }
+
+    PenefilesService &service;
+    std::string realfile;
+};
+
+oatpp::Object<ResponseDto> PenefilesService::upload_file(const std::shared_ptr<oatpp::web::protocol::http::incoming::Request> &request)
+{
+    namespace multipart = oatpp::web::mime::multipart;
+
+    create_uploads_folder_or_die();
+
+    auto mp = std::make_shared<multipart::PartList>(request->getHeaders());
+    multipart::Reader mp_reader(mp.get());
+    
+    mp_reader.setPartReader("session", multipart::createInMemoryPartReader(32));
+    std::string random_filename = fs::path("uploads") / generate_random_string(32);
+    UploadEntry entry(*this, random_filename); // This protects the file from being prematurely deleted
+
+    mp_reader.setPartReader("file", multipart::createFilePartReader(random_filename));
+    request->transferBody(&mp_reader);
+
+    const auto session_part = mp->getNamedPart("session");
+    const auto file_part = mp->getNamedPart("file");
+    OATPP_ASSERT_HTTP(session_part, Status::CODE_500, "Session cannot be empty");
+    std::string session_id(session_part->getPayload()->getInMemoryData()->c_str());
+
+    // Critical part
+    {
+        const std::lock_guard<std::mutex> guardian(mu);
+
+        auto user = select_user_by_session(session_id);
+
+        OATPP_ASSERT_HTTP(file_part && file_part->getFilename(), Status::CODE_500, "File cannot be empty");
+        OATPP_ASSERT_HTTP(file_part->getFilename()->c_str(), Status::CODE_500, "Incomplete file");
+
+        // Take a look at whether this file can be stat
+        auto file_stat = fs::status(random_filename);
+        OATPP_ASSERT_HTTP(fs::status_known(file_stat) && file_stat.type() != fs::file_type::not_found, Status::CODE_500, "File not uploaded");
+
+        std::string file_name = file_part->getFilename()->c_str();
+
+        std::vector<std::string> initial_tags;
+        initial_tags.insert(initial_tags.end(), 
+        {
+            user->username->c_str(),
+            PenefilesService::get_tag_by_filename(file_name)
+        });
+
+        auto file_dto = FileDto::createShared();
+        file_dto->filename = file_name;
+        file_dto->realfile = random_filename;
+        file_dto->size = fs::file_size(random_filename);
+        create_file(file_dto, initial_tags);
+
+        OATPP_LOGI("PENEfiles", "User %s has uploaded %s. Initial tags: %s, %s.", user->username->c_str(), file_name.c_str(), initial_tags[0].c_str(), initial_tags[1].c_str());
+        
+        auto res = ResponseDto::createShared();
+        res->status = 200;
+        res->message = random_filename;
+        return res;
+    }
+}
+
 oatpp::Object<ResponseDto> PenefilesService::create_file(const oatpp::Object<FileDto> &dto, std::vector<std::string> initial_tags)
 {
-    const std::lock_guard<std::mutex> guardian(mu);
-
     auto res = database->create_file(dto->filename, dto->realfile, dto->size, 0);
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
@@ -579,6 +662,12 @@ int PenefilesService::delete_orphans()
     for (const auto &entry : fs::directory_iterator(uploads))
     {
         std::string real_file = std::string("uploads/") + entry.path().filename().string();
+        if (upload_entries.find(real_file) != upload_entries.end())
+        {
+            OATPP_LOGI("PENEfiles", "File is being uploaded: %s.", real_file.c_str());
+            continue;
+        }
+
         auto res = database->get_file_from_realfile(real_file);
         if (!res->isSuccess())
         {

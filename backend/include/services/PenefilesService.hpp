@@ -8,10 +8,13 @@
 #include <thread>
 #include <condition_variable>
 #include <oatpp/web/protocol/http/Http.hpp>
+#include <oatpp/web/protocol/http/incoming/Request.hpp>
 #include <oatpp/core/macro/codegen.hpp>
 #include <oatpp/core/macro/component.hpp>
 #include "db/PenefilesDb.hpp"
 #include "dto/DTOs.hpp"
+
+class UploadEntry;
 
 class PenefilesService
 {
@@ -21,6 +24,7 @@ private:
     OATPP_COMPONENT(std::shared_ptr<PenefilesDb>, database);
 
     std::map<std::string, oatpp::Object<UserDto> > user_sessions;
+    std::map<std::string, bool> upload_entries;
     std::unique_ptr<std::thread> orphan_watcher_thread;
     std::mutex mu;
     std::condition_variable cv;
@@ -41,6 +45,7 @@ public:
     static std::string get_tag_by_filename(const std::string &path);
     static std::string generate_random_string(int n = 16);
 
+    oatpp::Object<ResponseDto> upload_file(const std::shared_ptr<oatpp::web::protocol::http::incoming::Request> &request);
     oatpp::Object<ResponseDto> create_file(const oatpp::Object<FileDto> &dto, std::vector<std::string> initial_tags);
     oatpp::Object<ResponseDto> update_file(const oatpp::Object<AuthFileUpdateDto> &dto);
     oatpp::Object<ResponseDto> delete_file(const oatpp::Object<AuthFileInfoDto> &auth_file_info_dto);
@@ -61,6 +66,8 @@ public:
 
 private:
     int delete_orphans();
+
+    friend class UploadEntry;
 };
 
 

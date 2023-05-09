@@ -8,10 +8,6 @@
 #include <oatpp/core/macro/component.hpp>
 #include <oatpp/core/data/stream/FileStream.hpp>
 #include <oatpp/web/protocol/http/outgoing/StreamingBody.hpp>
-#include <oatpp/web/mime/multipart/FileProvider.hpp>
-#include <oatpp/web/mime/multipart/InMemoryDataProvider.hpp>
-#include <oatpp/web/mime/multipart/Reader.hpp>
-#include <oatpp/web/mime/multipart/PartList.hpp>
 #include "services/PenefilesService.hpp"
 #include "filesystem.hpp"
 
@@ -155,53 +151,7 @@ public:
     ENDPOINT("POST", "/files/upload", files_upload,
         REQUEST(std::shared_ptr<IncomingRequest>, request))
     {
-        namespace multipart = oatpp::web::mime::multipart;
-
-        penefiles_service.create_uploads_folder_or_die();
-
-        auto mp = std::make_shared<multipart::PartList>(request->getHeaders());
-        multipart::Reader mp_reader(mp.get());
-        
-        mp_reader.setPartReader("session", multipart::createInMemoryPartReader(32));
-        std::string random_filename = fs::path("uploads") / penefiles_service.generate_random_string(32);
-        mp_reader.setPartReader("file", multipart::createFilePartReader(random_filename));
-        request->transferBody(&mp_reader);
-
-        const auto session_part = mp->getNamedPart("session");
-        const auto file_part = mp->getNamedPart("file");
-        OATPP_ASSERT_HTTP(session_part, Status::CODE_500, "Session cannot be empty");
-        std::string session_id(session_part->getPayload()->getInMemoryData()->c_str());
-
-        auto user = penefiles_service.select_user_by_session(session_id);
-
-        OATPP_ASSERT_HTTP(file_part && file_part->getFilename(), Status::CODE_500, "File cannot be empty");
-        OATPP_ASSERT_HTTP(file_part->getFilename()->c_str(), Status::CODE_500, "Incomplete file");
-
-        // Take a look at whether this file can be stat
-        auto file_stat = fs::status(random_filename);
-        OATPP_ASSERT_HTTP(fs::status_known(file_stat) && file_stat.type() != fs::file_type::not_found, Status::CODE_500, "File not uploaded");
-
-        std::string file_name = file_part->getFilename()->c_str();
-
-        std::vector<std::string> initial_tags;
-        initial_tags.insert(initial_tags.end(), 
-        {
-            user->username->c_str(),
-            PenefilesService::get_tag_by_filename(file_name)
-        });
-
-        auto file_dto = FileDto::createShared();
-        file_dto->filename = file_name;
-        file_dto->realfile = random_filename;
-        file_dto->size = fs::file_size(random_filename);
-        penefiles_service.create_file(file_dto, initial_tags);
-
-        OATPP_LOGI("PENEfiles", "User %s has uploaded %s. Initial tags: %s, %s.", user->username->c_str(), file_name.c_str(), initial_tags[0].c_str(), initial_tags[1].c_str());
-        
-        auto res = ResponseDto::createShared();
-        res->status = 200;
-        res->message = random_filename;
-        return createDtoResponse(Status::CODE_200, res);
+        return createDtoResponse(Status::CODE_200, penefiles_service.upload_file(request));
     }
 
     ENDPOINT("POST", "/notes/create", notes_create,
