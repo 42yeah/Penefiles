@@ -546,7 +546,13 @@ void PenefilesService::delete_orphans_watcher()
     std::unique_lock<std::mutex> lock(mu);
     while (running)
     {
-        cv.wait_for(lock, std::chrono::seconds(60));
+        const auto status = cv.wait_for(lock, std::chrono::seconds(60));
+        if (!running)
+        {
+            // The program is closing.
+            break;
+        }
+
         int orphans_removed = delete_orphans();
 
         if (orphans_removed != 0)
