@@ -188,7 +188,7 @@ export class Penefiles {
             console.log("database load profile: ", (end - begin) / 1000.0, "s");
             return true;
         } catch (e) {
-            this.message("错误：无法加载数据库。", "本地的数据库可能已经被污染。请等待从服务器拉取最新的数据库。");
+            this.message("Error: cannot load database", "The local database might've been corrupted. Please wait for us to pull a new one from the server.");
             return false;
         }
     }
@@ -397,38 +397,38 @@ export class Penefiles {
         }
         switch (this.sortByDate) {
             case 0:
-                this.sortByDateEl.innerHTML = "无日期排序";
+                this.sortByDateEl.innerHTML = "No date sort";
                 this.sortByDateEl.parentElement.classList.add("inactive");
                 this.sortByDateEl.previousElementSibling.classList.remove("invert");
                 break;
 
             case 1:
-                this.sortByDateEl.innerHTML = "日期倒序";
+                this.sortByDateEl.innerHTML = "D. date";
                 this.sortByDateEl.parentElement.classList.remove("inactive");
                 this.sortByDateEl.previousElementSibling.classList.add("invert");
                 break;
 
             case 2:
-                this.sortByDateEl.innerHTML = "日期正序";
+                this.sortByDateEl.innerHTML = "A. date";
                 this.sortByDateEl.parentElement.classList.remove("inactive");
                 this.sortByDateEl.previousElementSibling.classList.remove("invert");
                 break;
         }
         switch (this.sortByName) {
             case 0:
-                this.sortByNameEl.innerHTML = "无文件名排序";
+                this.sortByNameEl.innerHTML = "No name sort";
                 this.sortByNameEl.parentElement.classList.add("inactive");
                 this.sortByNameEl.previousElementSibling.classList.remove("invert");
                 break;
 
             case 1:
-                this.sortByNameEl.innerHTML = "文件名正序";
+                this.sortByNameEl.innerHTML = "A. name";
                 this.sortByNameEl.parentElement.classList.remove("inactive");
                 this.sortByNameEl.previousElementSibling.classList.remove("invert");
                 break;
 
             case 2:
-                this.sortByNameEl.innerHTML = "文件名倒序";
+                this.sortByNameEl.innerHTML = "D. name";
                 this.sortByNameEl.parentElement.classList.remove("inactive");
                 this.sortByNameEl.previousElementSibling.classList.add("invert");
                 break;
@@ -436,12 +436,12 @@ export class Penefiles {
 
         switch (this.onlyShowMine) {
             case 0:
-                this.onlyShowMineEl.innerHTML = "显示所有人的";
+                this.onlyShowMineEl.innerHTML = "Everyone";
                 this.onlyShowMineEl.parentElement.classList.add("inactive");
                 break;
 
             case 1:
-                this.onlyShowMineEl.innerHTML = "只显示我的";
+                this.onlyShowMineEl.innerHTML = "Only mine";
                 this.onlyShowMineEl.parentElement.classList.remove("inactive");
                 break;
         }
@@ -473,7 +473,7 @@ export class Penefiles {
                         reject(lines[3].split("=")[1]);
                         return;
                     } else {
-                        reject("由于某些未知的原因，文件上传失败了。");
+                        reject("Upload failed due to some mysterious reason.");
                         return;
                     }
                 }
@@ -486,7 +486,7 @@ export class Penefiles {
                     if (!this.superPositionFileQueueWindowEl.classList.contains("hidden")) {
                         const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
                         if (f.length == 0) {
-                            this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
+                            this.message("Error: the file has been uploaded but cannot be located.", "This is not supposed to happen. Please file an issue.");
                             return;
                         }
                         this.fileInfo(f[0].id);
@@ -499,7 +499,7 @@ export class Penefiles {
                 this.ajax = null;
             });
             ajax.addEventListener("abort", (e) => {
-                reject("你已经终止文件上传。");
+                reject("You have terminated the upload.");
                 this.ajax = null;
             });
             ajax.open("POST", `${API}/files/upload`);
@@ -530,7 +530,7 @@ export class Penefiles {
         this.uploadNextFile().then(() => {
             this.uploadAllFiles();
         }).catch(e => {
-            this.message(`错误：文件 ${thisFile.name} 无法上传。`, e.toString());
+            this.message(`Error: upload failed: ${thisFile.name}`, e.toString());
             this.uploadAllFiles();
         });
     }
@@ -541,7 +541,7 @@ export class Penefiles {
         }
         const f = sql(this.queries.findFileById, { ":id": this.lastSelectedID }, true);
         if (f.length == 0) {
-            this.message("错误：无法分享该文件。", "该文件已经不存在于数据库中。你也许需要刷新。");
+            this.message("Error: cannot share file", "The file is no longer in the database. You may need to refresh.");
             return;
         }
         let url = `${API}/${f[0].realfile}/${f[0].filename}`;
@@ -552,7 +552,7 @@ export class Penefiles {
         if ("share" in navigator) {
             navigator.share({
                 title: `${f[0].filename} | PENEfiles`,
-                text: `${this.username} 正在使用 PENEfiles 和你分享 ${f[0].filename}。`,
+                text: `${this.username} is using PENEfiles to share ${f[0].filename} with you.`,
                 url: url
             });
         } else {
@@ -560,20 +560,20 @@ export class Penefiles {
             this.fileUrlEl.value = url;
             this.fileUrlEl.setSelectionRange(0, this.fileUrlEl.value.length + 1);
             navigator.clipboard.writeText(this.fileUrlEl.value);
-            this.message("链接已经复制到你的剪贴板。", "由于你的浏览器不支持分享功能，链接已经复制到了你的剪贴板中。");
+            this.message("Link copied to clipboard", "As your browser does not support sharing functionality, the link is instead directly copied to your clipboard.");
         }
     }
 
     doCreateNote() {
         if (this.session == null) {
-            this.message("请先登陆。", `你必须要先 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+            this.message("Login first", `You need to <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
                 <img src="assets/key.svg" class="icon-controls">
-                <div>登陆</div>
-            </div> 才能创建笔记。`);
+                <div>Login</div>
+            </div> to create notes.`);
             return;
         }
         const now = new Date();
-        let filename = `新笔记 ${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}.md`;
+        let filename = `Note ${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}.md`;
         let tags = `${this.username} Note`;
         this.setInfoPaneContent(getCreateNotes(filename, tags));
         this.publicEl = document.querySelector("#public");
@@ -589,16 +589,16 @@ export class Penefiles {
 
     doEditNote() {
         if (this.session == null) {
-            this.message("请先登陆。", `你必须要先 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+            this.message("Login first", `You need to <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
                 <img src="assets/key.svg" class="icon-controls">
-                <div>登陆</div>
-            </div> 才能创建笔记。`);
+                <div>Login</div>
+            </div> to edit notes.`);
             return;
         }
 
         let markdownSrc = document.querySelector("#markdown-src");
         if (!markdownSrc || markdownSrc.innerHTML == "") {
-            this.message("请先等待 Notes 加载完毕。", "Notes 仍在加载过程当中，请在完全显示出来之后再进行编辑。");
+            this.message("Note is still loading", "The note is still being loaded. Please edit only after it's fully shown.");
             return;
         }
 
@@ -606,7 +606,7 @@ export class Penefiles {
             ":id": this.lastSelectedID
         }, true);
         if (f.length == 0) {
-            this.message("错误：无法找到要修改的笔记。", "PENEfiles 状态机估计出了某些问题。");
+            this.message("Error: cannot locate note", "Something may be off with the PENEfiles states. Refresh?");
             return;
         }
         const tags = sql(this.queries.findTagsOfFile, { ":id": f[0].id }, false);
@@ -669,23 +669,23 @@ export class Penefiles {
             } catch (e) {
                 console.log(e);
                 let lines = text.split("\n");
-                this.message("错误：笔记创建失败。", lines[3].split("=")[1]);
+                this.message("Error: cannot create note", lines[3].split("=")[1]);
                 return;
             }
             if (json.status != 200) {
-                this.message("错误：笔记创建失败。", json.message);
+                this.message("Error: cannot create note", json.message);
                 return;
             }
             this.doRefresh().then(() => {
                 const f = sql(this.queries.getFileFromRealfile, { ":realfile": json.message }, true);
                 if (f.length == 0) {
-                    this.message("错误：文件已经上传，但是无法找到。", "这是一个不应该发生的问题，请联系我。");
+                    this.message("Error: the file has been uploaded but cannot be located.", "This is not supposed to happen. Please file an issue.");
                     return;
                 }
                 this.fileInfo(f[0].id);
             });
         }).catch(e => {
-            this.message("错误：笔记创建失败。", e.toString());
+            this.message("Error: cannot create note", e.toString());
         });
     }
 
@@ -694,7 +694,7 @@ export class Penefiles {
             ":id": this.lastSelectedID
         }, true);
         if (f.length == 0) {
-            this.message("错误：无法找到要修改的笔记。", "PENEfiles 状态机估计出了某些问题。");
+            this.message("Error: cannot locate note", "Something may be off with the PENEfiles states. Refresh?");
             return;
         }
         let filename = this.fileNameInputEl.value;
@@ -724,11 +724,11 @@ export class Penefiles {
             } catch (e) {
                 console.log(e);
                 let lines = text.split("\n");
-                this.message("错误：笔记修改失败。", lines[3].split("=")[1]);
+                this.message("Error: note update failed", lines[3].split("=")[1]);
                 return;
             }
             if (json.status != 200) {
-                this.message("错误：笔记修改失败。", json.message);
+                this.message("Error: note update failed", json.message);
                 return;
             }
             this.doRefresh().then(() => {
@@ -737,7 +737,7 @@ export class Penefiles {
                 this.fileInfo(f[0].id);
             });
         }).catch(e => {
-            this.message("错误：笔记修改失败。", e.toString());
+            this.message("Error: note update failed", e.toString());
         });
     }
 
@@ -746,10 +746,10 @@ export class Penefiles {
             return;
         }
         if (this.session == null) {
-            this.message("请先登陆。", `你必须要先 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+            this.message("Login first", `You need to <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
                 <img src="assets/key.svg" class="icon-controls">
-                <div>登陆</div>
-            </div> 才能上传文件。`);
+                <div>Login</div>
+            </div> to upload files.`);
             return;
         }
         if (this.uploadFileEl.files.length == 0) {
@@ -770,10 +770,10 @@ export class Penefiles {
             this.session = null;
             this.updateTopOperations();
             this.dumpVariables();
-            throw `你的登陆凭证已经超时。请重新 <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
+            throw `Your login credentials have expired. Please <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
                     <img src="assets/key.svg" class="icon-controls">
-                    <div>登陆</div>
-                </div> 。`;
+                    <div>Login</div>
+                </div> again.`;
         }).then(() => {
             for (const f of this.uploadFileEl.files) {
                 let data = new FormData();
@@ -788,7 +788,7 @@ export class Penefiles {
             this.superPositionFileQueueWindowEl.classList.remove("hidden");
             this.uploadAllFiles();
         }).catch(e => {
-            this.message("错误：文件上传失败。", e.toString());
+            this.message("Error: cannot upload file(s)", e.toString());
         });
         
         // (json => {
@@ -821,7 +821,7 @@ export class Penefiles {
             ":id": this.lastSelectedID
         }, true);
         if (f.length == 0) {
-            this.message("错误：无法找到要修改的文件。", "PENEfiles 状态机估计出了某些问题。");
+            this.message("Error: cannot locate file", "Something may be off with the PENEfiles states. Refresh?");
             return;
         }
         let level = this.publicEl.checked ? 0 : this.unlistedEl.checked ? 1 : 2;
@@ -847,7 +847,7 @@ export class Penefiles {
                 this.doRefresh();
             }, 100);
         }).catch(e => {
-            this.message("错误：无法修改文件。", e.toString());
+            this.message("Error: cannot update file", e.toString());
         });
     }
 
@@ -856,7 +856,7 @@ export class Penefiles {
             ":id": this.lastSelectedID
         }, true);
         if (f.length == 0) {
-            this.message("错误：无法找到要删除的文件。", "PENEfiles 状态机估计出了某些问题。");
+            this.message("Error: cannot locate file", "Something may be off with the PENEfiles states. Refresh?");
             return;
         }
         return fetch(`${API}/files/delete`, {
@@ -874,11 +874,11 @@ export class Penefiles {
                 json = JSON.parse(text);
             } catch (e) {
                 let lines = text.split("\n");
-                this.message("错误：文件删除失败。", lines[3].split("=")[1]);
+                this.message("Error: file deletion failed", lines[3].split("=")[1]);
                 return;
             }
             if (json.status != 200) {
-                this.message("错误：文件删除失败。", json.message);
+                this.message("Error: file deletion failed", json.message);
                 return;
             }
             this.lastSelectedID = -1;
@@ -888,7 +888,7 @@ export class Penefiles {
                 this.dumpVariables();
             }
         }).catch(e => {
-            this.message("错误：文件删除失败。", e.toString());
+            this.message("Error: file deletion failed", e.toString());
         });
     }
 
@@ -924,7 +924,7 @@ export class Penefiles {
             try {
                 const json = JSON.parse(text);
                 if (json.status == 200) {
-                    this.message("登陆成功", "你已经成功登陆。");
+                    this.message("Login successful", "You have successfully logged in.");
                     this.session = json.message;
                     this.onlyShowMine = 1;
                     this.personalInfo();
@@ -933,17 +933,17 @@ export class Penefiles {
                 }
             } catch (e) {
                 const lines = text.split("\n");
-                this.message("错误：无法登陆", lines[3].split("=")[1]);
+                this.message("Error: cannot login", lines[3].split("=")[1]);
             }
             this.updateTopOperations();
             this.dumpVariables();
         }).catch(e => {
-            this.message("错误：无法登陆", e.toString());
+            this.message("Error: cannot login", e.toString());
         });
     }
 
     doLogout() {
-        this.message("登出成功", "你已成功退出登录。");
+        this.message("Logout successful", "You have successfully logged out.");
         this.session = null;
         this.onlyShowMine = false;
         this.updateTopOperations();
@@ -972,19 +972,19 @@ export class Penefiles {
             try {
                 const json = JSON.parse(text);
                 if (json.status == 200) {
-                    this.message("注册成功", `请跳转至 
+                    this.message("Registration successful", `Return to  
                     <div onclick="session.login()" class="control-button controls with-icon inline-control-button">
                         <img src="assets/key.svg" class="icon-controls">
-                        <div>登陆</div>
-                    </div> 页面登陆。`
+                        <div>Login</div>
+                    </div> page to start using PENEfiles.`
                     );
                 }
             } catch (e) {
                 const lines = text.split("\n");
-                this.message("错误：无法注册", lines[3].split("=")[1]);
+                this.message("Error: registration failed", lines[3].split("=")[1]);
             }
         }).catch(e => {
-            this.message("错误：无法注册", e.toString());
+            this.message("Error: registration failed", e.toString());
         });
     }
 
@@ -1118,7 +1118,7 @@ export class Penefiles {
 
             return true;
         }).catch(e => {
-            this.message("错误：文件修改失败。", e.toString());
+            this.message("Error: file update failed", e.toString());
         });
     }
 
@@ -1145,7 +1145,7 @@ export class Penefiles {
                     resolve();
                 }
             }).catch(e => {
-                this.message("错误：无法拉取文件列表。", e.toString());
+                this.message("Error: cannot pull file list", e.toString());
                 reject(e);
             });
             fetch(`${API}/tags`, {
@@ -1160,7 +1160,7 @@ export class Penefiles {
                     resolve();
                 }
             }).catch(e => {
-                this.message("错误：无法拉取标签列表。", e.toString());
+                this.message("Error: cannot pull tag list", e.toString());
                 reject(e);
             });
             fetch(`${API}/users`, {
@@ -1175,7 +1175,7 @@ export class Penefiles {
                     resolve();
                 }
             }).catch(e => {
-                this.message("错误：无法拉取标签列表。", e.toString());
+                this.message("Error: cannot pull tag list", e.toString());
                 reject(e);
             });
             fetch(`${API}/files-tags`, {
@@ -1190,7 +1190,7 @@ export class Penefiles {
                     resolve();
                 }
             }).catch(e => {
-                this.message("错误：无法拉取文件标签列表。", e.toString());
+                this.message("Error: cannot pull files-tags list", e.toString());
                 reject(e);
             });
         });
@@ -1272,7 +1272,7 @@ export class Penefiles {
             };
 
             this.updateOne(req).catch(e => {
-                this.message("错误：无法修改 " + this.multiSelect[i].filename + "。", e.toString());
+                this.message("Error: cannot update " + this.multiSelect[i].filename, e.toString());
             }).finally(() => {
                 updated++;
                 if (updated == toUpdate) {
@@ -1465,7 +1465,7 @@ export class Penefiles {
         <div class="padding-top-5px"></div>
         <div onclick="session.closeMessage()" class="control-button controls with-icon control-button-row">
             <img src="assets/accept.svg" class="icon-controls">
-            <div>好</div>
+            <div>OK</div>
         </div>
         `);
         this.superPositionInfoWindowEl.classList.remove("hidden");
@@ -1636,7 +1636,7 @@ export class Penefiles {
         }
 
         if (f.length == 0) {
-            this.message("错误：无法找到文件 " + id, "这个文件不存在于数据库中。可能是因为代码有漏洞或者数据库已经老了。尝试刷新，或者通知 42yeah.");
+            this.message("Error: cannot locate " + id, "This file doesn't exist in the database. It's possible the database is outdated or something fishy is happening. Try refreshing, and if it doesn't work, please file an issue.");
             this.lastSelectedID = -1;
             this.dumpVariables();
             return;
@@ -1705,22 +1705,22 @@ export class Penefiles {
 const loginPage = `
 <div class="container-center">
     <div class="info-pane-operations">
-        <h2>登陆</h2>
+        <h2>Login</h2>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">用户名</div>
+            <div class="info-pane-label">Username</div>
             <div class="info-pane-input">
                 <input onkeydown="return checkSlash(event.key)" id="username" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">密码</div>
+            <div class="info-pane-label">Password</div>
             <div class="info-pane-input">
                 <input onkeydown="return checkSlash(event.key)" id="password" type="password" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div onclick="session.doLogin()" class="control-button controls with-icon control-button-row">
             <img src="assets/key.svg" class="icon-controls">
-            <div>登陆</div>
+            <div>Login</div>
         </div>
     </div>
 </div>
@@ -1729,34 +1729,34 @@ const loginPage = `
 const registerPage = `
 <div class="container-center">
     <div class="info-pane-operations">
-        <h2>注册</h2>
+        <h2>Register</h2>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">用户名</div>
+            <div class="info-pane-label">Username</div>
             <div class="info-pane-input">
                 <input id="username" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">密码</div>
+            <div class="info-pane-label">Password</div>
             <div class="info-pane-input">
                 <input id="password" type="password" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">确认密码</div>
+            <div class="info-pane-label">Confirm password</div>
             <div class="info-pane-input">
                 <input id="password-again" type="password" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">邀请码</div>
+            <div class="info-pane-label">Invitation code</div>
             <div class="info-pane-input">
                 <input id="invitation" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div onclick="session.doRegister()" class="control-button controls with-icon control-button-row">
             <img src="assets/asterisk_yellow.svg" class="icon-controls">
-            <div>注册</div>
+            <div>Register</div>
         </div>
     </div>
 </div>
@@ -1765,15 +1765,15 @@ const registerPage = `
 const testsPage = `
 <div class="container-center">
     <div class="info-pane-operations">
-        <h2>调试面板</h2>
+        <h2>Debug panel</h2>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">调试输入</div>
+            <div class="info-pane-label">Debug input</div>
             <div class="info-pane-input">
                 <input id="test-input" class="controls info-pane-tags-input" value="">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">选取文件</div>
+            <div class="info-pane-label">File select</div>
             <div class="info-pane-input">
                 <input id="test-file" type="file" class="controls info-pane-tags-input" value="">
             </div>
@@ -1781,88 +1781,87 @@ const testsPage = `
         <div class="test-operations">
             <div onclick="session.testGet()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>GET 请求</div>
+                <div>GET</div>
             </div>
             <div onclick="session.testRegister()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试注册</div>
+                <div>Test registration</div>
             </div>
             <div onclick="session.testLogin()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试登陆</div>
+                <div>Test login</div>
             </div>
             <div onclick="session.testBadLogin()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试错误的登陆</div>
+                <div>Test malformed login</div>
             </div>
             <div onclick="session.testMakeCode()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试邀请码生成</div>
+                <div>Test invitation code</div>
             </div>
             <div onclick="session.testUpload()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试文件上传</div>
+                <div>Test file upload</div>
             </div>
             <div onclick="session.testClearCached()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>清除缓存</div>
+                <div>Clear cache</div>
             </div>
             <div onclick="session.testPreflight()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试文件上传前登陆检测</div>
+                <div>Test preflight</div>
             </div>
             <div onclick="session.testListAllDb()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>列出数据库</div>
+                <div>List all databases</div>
             </div>
             <div onclick="session.testAQE()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>任意查询</div>
+                <div>Arbitrary query</div>
             </div>
             <div onclick="session.dumpDatabase()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试保存数据库</div>
+                <div>Test DB dump</div>
             </div>
             <div onclick="session.loadDatabase()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>测试加载数据库</div>
+                <div>Test DB load</div>
             </div>
             <div onclick="session.testStopServiceWorkers()" class="control-button controls with-icon control-button-tight">
                 <img src="assets/bug_go.svg" class="icon-controls">
-                <div>停止所有 ServiceWorker</div>
+                <div>Stop all ServiceWorkers</div>
             </div>
         </div>
     </div>
-    
 </div>
 `;
 
 const neutralPage = `
 <div class="container-center">
-    <h1 class="gray">欢迎使用 PENEfiles。</h1>
+    <h1 class="gray">Welcome to PENEfiles.</h1>
 </div>`;
 
 function getUserInfo() {
     return `
-    <h2 class="file-name-title">用户：${session.username}</h2>
+    <h2 class="file-name-title">User: ${session.username}</h2>
     <div class="info-pane-operations-container">
         <div class="file-operations">
             <div onclick="session.doLogout()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/disconnect.svg">
-                <div>退出登陆</div>
+                <div>Logout</div>
             </div>
         </div>
     </div>
     <div class="info-pane-operations-container">
         <div class="info-pane-operations">
             <div class="info-pane-pairs">
-                <div class="info-pane-label">原本密码</div>
+                <div class="info-pane-label">Original password</div>
                 <div class="info-pane-input">
                     <input type="password" class="controls info-pane-tags-input" value="">
                 </div>
             </div>
             <div class="info-pane-pairs">
-                <div class="info-pane-label">新密码</div>
+                <div class="info-pane-label">New password</div>
                 <div class="info-pane-input">
                     <input type="password" class="controls info-pane-tags-input" value="">
                 </div>
@@ -1870,7 +1869,7 @@ function getUserInfo() {
             <div class="padding-top-5px">
                 <div class="control-button with-icon controls inline-control-button">
                     <img class="icon-controls" src="assets/brick_go.svg">
-                    <div>保存修改</div>
+                    <div>Save</div>
                 </div>
             </div>
         </div>
@@ -2024,7 +2023,7 @@ export function getFileInfo(f) {
         <div class="big-image-preview">
             <video controls>
                 <source src="${API}/${f.realfile}/${f.filename}">
-                你的浏览器也许不支持视频播放。
+                Your browser may not support playing videos.
             </video>
         </div>`;
     }
@@ -2033,7 +2032,7 @@ export function getFileInfo(f) {
         <div class="big-image-preview">
             <audio controls>
                 <source src="${API}/${f.realfile}/${f.filename}">
-                你的浏览器也许不支持视频播放。
+                Your browser may not support playing videos.
             </audio>
         </div>`;
     }
@@ -2046,7 +2045,7 @@ export function getFileInfo(f) {
                 
             });
         }).catch(e => {
-            session.message("错误：无法预览 .doc 文件。", e.toString());
+            session.message("Error: cannot preview .doc", e.toString());
         });
         preview += `
             <div class="preview-container"></div>
@@ -2088,7 +2087,7 @@ export function getFileInfo(f) {
                     };
                     let renderTask = page.render(renderCtx);
                 }).catch(e => {
-                    session.message("无法渲染 .pdf 文件。", e.toString());
+                    session.message("Error: cannot render .pdf", e.toString());
                 });
             }
             displayPage();
@@ -2114,11 +2113,11 @@ export function getFileInfo(f) {
                 <div class="file-operations">
                     <div id="prev-page" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/book_previous.svg">
-                        <div>上一页</div>
+                        <div>Prev. page</div>
                     </div>
                     <div id="next-page" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/book_next.svg">
-                        <div>下一页</div>
+                        <div>Next page</div>
                     </div>
                 </div>
             </div>
@@ -2135,7 +2134,7 @@ export function getFileInfo(f) {
                 <img src="${src}">
             `;
         }).catch(e => {
-            session.message(`无法预览 ${f.filename}。`, e.toString());
+            session.message(`Error: cannot preview ${f.filename}`, e.toString());
         });
     }
     if (isMarkdown) {
@@ -2153,7 +2152,7 @@ export function getFileInfo(f) {
                 const f = sql(session.queries.findFileById, { ":id": +m[1] }, true);
                 let filename = "???";
                 if (f.length == 0) {
-                    session.message("错误：无法找到 Note 中引用的文件。", `${m[1]} 是一个不存在的 Note。是已经被删除了吗？`);
+                    session.message("Error: cannot find crossref in note", `${m[1]} no longer exists. Was it deleted?`);
                 } else {
                     filename = f[0].filename;
                 }
@@ -2172,7 +2171,7 @@ export function getFileInfo(f) {
                 let filename = "???";
                 let href = "#";
                 if (f.length == 0) {
-                    session.message("错误：无法找到 Note 中引用的文件。", `${m[1]} 是一个不存在的文件。是已经被删除了吗？`);
+                    session.message("Error: cannot find file referenced in note", `${m[1]} no longer exists. Was it deleted?`);
                 } else {
                     filename = f[0].filename;
                     href = `${API}/${m[1]}/${filename}`;
@@ -2197,7 +2196,7 @@ export function getFileInfo(f) {
             document.querySelector("#markdown-src").innerHTML = text;
             MathJax.typeset([preview]);
         }).catch(e => {
-            session.message(`无法预览 ${f.filename}。`, e.toString());
+            session.message(`Error: cannot preview ${f.filename}`, e.toString());
         });
         preview += `
             <div class="info-pane-table-container big-screen-h-center flex-1">
@@ -2210,19 +2209,19 @@ export function getFileInfo(f) {
                 <div class="file-operations">
                     <div onclick="session.doEditNote()" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/page_white_edit.svg">
-                        <div>编辑笔记</div>
+                        <div>Edit note</div>
                     </div>
                     <a href="${API}/${f.realfile}/${f.filename}" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/disk.svg">
-                        <div>下载文件</div>
+                        <div>Download</div>
                     </a>
                     <div onclick="session.doDelete()" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/bin.svg">
-                        <div>删除文件</div>
+                        <div>Delete</div>
                     </div>
                     <div onclick="session.doShare()" class="control-button with-icon controls">
                         <img class="icon-controls" src="assets/link.svg">
-                        <div>分享笔记</div>
+                        <div>Share</div>
                     </div>
                 </div>
             </div>
@@ -2239,50 +2238,50 @@ export function getFileInfo(f) {
         <div class="file-operations">
             <div onclick="session.doDelete()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/bin.svg">
-                <div>删除文件</div>
+                <div>Delete</div>
             </div>
             <a href="${API}/${f.realfile}/${f.filename}" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/disk.svg">
-                <div>下载文件</div>
+                <div>Download</div>
             </a>
             <input id="file-url" value="${encodeURI(API + "/" + f.realfile + "/" + f.filename)}" class="readonly hidden">
             <div onclick="session.doUpdate()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/brick_go.svg">
-                <div>保存修改</div>
+                <div>Save</div>
             </div>
             <div onclick="session.doShare()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/link.svg">
-                <div>分享文件</div>
+                <div>Share</div>
             </div>
         </div>
     </div>
     <div class="info-pane-operations">
         <div class="info-pane-pairs">
-            <div class="info-pane-label">文件名</div>
+            <div class="info-pane-label">File name</div>
             <div class="info-pane-input">
                 <input onkeydown="return checkSlash(event.key)" onchange="session.doUpdate()" id="file-name-input" class="controls info-pane-tags-input" value="${f.filename}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">标签</div>
+            <div class="info-pane-label">Tag(s)</div>
             <div class="info-pane-input">
                 <input onkeydown="return checkSlash(event.key)" onchange="session.doUpdate()" id="tags-input" class="controls info-pane-tags-input" value="${tagsStr}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有等级</div>
+            <div class="info-pane-label">Confidentiality</div>
             <div class="info-pane-checkbox">
                 <label for="public" class="radio-option controls">
                     <input ${f.confidentiality == 0 ? `checked="checked"` : ""} onchange="session.doUpdate()" class="controls" type="radio" id="public" name="confidentiality">
-                    <span>公开</span>
+                    <span>Public</span>
                 </div>
                 <label for="unlisted" class="radio-option controls">
                     <input ${f.confidentiality == 1 ? `checked="checked"` : ""} onchange="session.doUpdate()" class="controls" type="radio" id="unlisted" name="confidentiality">
-                    <span>不列出</span>
+                    <span>Unlisted</span>
                 </label>
                 <label for="confidential" class="radio-option controls">
                     <input ${f.confidentiality == 2 ? `checked="checked"` : ""} onchange="session.doUpdate()" class="controls" type="radio" id="confidential" name="confidentiality">
-                    <span>私有</span>
+                    <span>Private</span>
                 </div>
             </div>
         </div>
@@ -2290,13 +2289,13 @@ export function getFileInfo(f) {
     ${preview}
     <div class="info-pane-table-container">
         <div class="info-pane-table">
-            <div class="info-pane-label">大小</div>
+            <div class="info-pane-label">File size</div>
             <div>${getSize(f.size)} (${f.size}b)</div>
-            <div class="info-pane-label">创建日期</div>
+            <div class="info-pane-label">Date created</div>
             <div>${f.created_at}</div>
-            <div class="info-pane-label">最后修改于</div>
+            <div class="info-pane-label">Last modified</div>
             <div>${f.modified_at}</div>
-            <div class="info-pane-label">上传于</div>
+            <div class="info-pane-label">Uploaded</div>
             <div>${f.created_at}</div>
         </div>
     </div>
@@ -2323,44 +2322,44 @@ function getMultiselect(selections) {
         baseTag = session.username;
     }
     return `
-    <h2 class="file-name-title">已选取 ${selections.length} 个文件</h2>
+    <h2 class="file-name-title">${selections.length} selected</h2>
     <div class="info-pane-operations-container">
         <div class="file-operations">
             <div onclick="session.doMultiDelete()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/bin.svg">
-                <div>删除文件</div>
+                <div>Delete</div>
             </div>
             <a onclick="session.doMultiDownload()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/disk.svg">
-                <div>下载文件</div>
+                <div>Download</div>
             </a>
             <div onclick="session.doMultiUpdate()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/brick_go.svg">
-                <div>保存修改</div>
+                <div>Save</div>
             </div>
         </div>
     </div>
     <div class="info-pane-operations">
         <div class="info-pane-pairs">
-            <div class="info-pane-label">标签</div>
+            <div class="info-pane-label">Tag(s)</div>
             <div class="info-pane-input">
                 <input onkeydown="return checkSlash(event.key)" id="tags-input" class="controls info-pane-tags-input" value="${baseTag}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有等级</div>
+            <div class="info-pane-label">Confidentiality</div>
             <div class="info-pane-checkbox">
                 <label for="public" class="radio-option controls">
                     <input class="controls" type="radio" id="public" name="confidentiality">
-                    <span>公开</span>
+                    <span>Public</span>
                 </div>
                 <label for="unlisted" class="radio-option controls">
                     <input class="controls" type="radio" id="unlisted" name="confidentiality">
-                    <span>不列出</span>
+                    <span>Unlisted</span>
                 </label>
                 <label for="confidential" class="radio-option controls">
                     <input class="controls" type="radio" id="confidential" name="confidentiality">
-                    <span>私有</span>
+                    <span>Private</span>
                 </div>
             </div>
         </div>
@@ -2371,31 +2370,31 @@ function getMultiselect(selections) {
 function getCreateNotes(filename, tags) {
     return `<div class="info-pane-operations">
         <div class="info-pane-pairs">
-            <div class="info-pane-label">文件名</div>
+            <div class="info-pane-label">File name</div>
             <div class="info-pane-input">
                 <input id="file-name-input" onkeydown="return checkSlash(event.key)" id="file-name-input" class="controls info-pane-tags-input" value="${filename}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">标签</div>
+            <div class="info-pane-label">Tag(s)</div>
             <div class="info-pane-input">
                 <input id="tags-input" onkeydown="return checkSlash(event.key)" id="tags-input" class="controls info-pane-tags-input" value="${tags}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有等级</div>
+            <div class="info-pane-label">Confidentiality</div>
             <div class="info-pane-checkbox">
                 <label for="public" class="radio-option controls">
                     <input checked="checked" class="controls" type="radio" id="public" name="confidentiality">
-                    <span>公开</span>
+                    <span>Public</span>
                 </div>
                 <label for="unlisted" class="radio-option controls">
                     <input class="controls" type="radio" id="unlisted" name="confidentiality">
-                    <span>不列出</span>
+                    <span>Unlisted</span>
                 </label>
                 <label for="confidential" class="radio-option controls">
                     <input class="controls" type="radio" id="confidential" name="confidentiality">
-                    <span>私有</span>
+                    <span>Private</span>
                 </div>
             </div>
         </div>
@@ -2404,7 +2403,7 @@ function getCreateNotes(filename, tags) {
         <div class="file-operations">
             <div onclick="session.doSubmitNote()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/page_white_edit.svg">
-                <div>创建笔记</div>
+                <div>Create note</div>
             </div>
         </div>
     </div>
@@ -2416,31 +2415,31 @@ function getCreateNotes(filename, tags) {
 function getModifyNotes(filename, tags, confidentiality) {
     return `<div class="info-pane-operations">
         <div class="info-pane-pairs">
-            <div class="info-pane-label">文件名</div>
+            <div class="info-pane-label">File name</div>
             <div class="info-pane-input">
                 <input id="file-name-input" onkeydown="return checkSlash(event.key)" id="file-name-input" class="controls info-pane-tags-input" value="${filename}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">标签</div>
+            <div class="info-pane-label">Tag(s)</div>
             <div class="info-pane-input">
                 <input id="tags-input" onkeydown="return checkSlash(event.key)" id="tags-input" class="controls info-pane-tags-input" value="${tags}">
             </div>
         </div>
         <div class="info-pane-pairs">
-            <div class="info-pane-label">私有等级</div>
+            <div class="info-pane-label">Confidentiality</div>
             <div class="info-pane-checkbox">
                 <label for="public" class="radio-option controls">
                     <input ${confidentiality == 0 ? `checked="checked"` : ""} class="controls" type="radio" id="public" name="confidentiality">
-                    <span>公开</span>
+                    <span>Public</span>
                 </div>
                 <label for="unlisted" class="radio-option controls">
                     <input ${confidentiality == 1 ? `checked="checked"` : ""} class="controls" type="radio" id="unlisted" name="confidentiality">
-                    <span>不列出</span>
+                    <span>Unlisted</span>
                 </label>
                 <label for="confidential" class="radio-option controls">
                     <input ${confidentiality == 2 ? `checked="checked"` : ""} class="controls" type="radio" id="confidential" name="confidentiality">
-                    <span>私有</span>
+                    <span>Private</span>
                 </div>
             </div>
         </div>
@@ -2449,15 +2448,15 @@ function getModifyNotes(filename, tags, confidentiality) {
         <div class="file-operations">
             <div onclick="session.doSaveNote()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/page_white_edit.svg">
-                <div>保存笔记</div>
+                <div>Save</div>
             </div>
             <div onclick="session.doDiscardNote()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/cancel.svg">
-                <div>放弃修改</div>
+                <div>Abort</div>
             </div>
             <div onclick="session.doDelete()" class="control-button with-icon controls">
                 <img class="icon-controls" src="assets/bin.svg">
-                <div>删除文件</div>
+                <div>Delete</div>
             </div>
         </div>
     </div>

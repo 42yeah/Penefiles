@@ -469,7 +469,7 @@ html {
     border-radius: 2px;
     padding: 5px;
     display: inline-grid;
-    grid-template-columns: 100px auto;
+    grid-template-columns: 150px auto;
 }
 
 .info-pane-checkbox {
