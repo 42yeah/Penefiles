@@ -2,3 +2,4 @@
 backend/build
 build
 intermediate/node_modules
+backend/.cache

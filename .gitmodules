@@ -1,0 +1,6 @@
+[submodule "backend/deps/oatpp"]
+	path = backend/deps/oatpp
+	url = https://github.com/oatpp/oatpp
+[submodule "backend/deps/oatpp-sqlite"]
+	path = backend/deps/oatpp-sqlite
+	url = https://github.com/oatpp/oatpp-sqlite
