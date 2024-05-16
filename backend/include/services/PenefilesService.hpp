@@ -37,7 +37,7 @@ public:
     oatpp::Object<ResponseDto> create_user(const oatpp::Object<UserRegistrationDto> &dto);
     oatpp::Object<ResponseDto> login(const oatpp::Object<UserDto> &dto);
 
-    oatpp::Object<CodeDto> make_code();
+    oatpp::Object<CodeDto> make_code(const oatpp::Object<AuthenticationDto> &dto);
 
     bool authenticate(const std::string &session_id);
     oatpp::Object<UserDto> select_user_by_session(const std::string &session_id); 
@@ -63,6 +63,14 @@ public:
 
     void delete_orphans_watcher();
     void create_uploads_folder_or_die();
+
+    void set_stdin_echo(bool enabled);
+    
+    /**
+       unboxing() initiates some guides for first-time runners.
+       We give advice on NGINX configs, frontend configs, and more.
+    */
+    bool unboxing();
 
 private:
     int delete_orphans();

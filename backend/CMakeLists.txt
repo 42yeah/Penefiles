@@ -15,3 +15,7 @@ add_subdirectory(deps)
 add_subdirectory(src)
 add_subdirectory(sql)
 
+set(FRONTEND_DEST_DIR ${CMAKE_BINARY_DIR})
+add_custom_target(frontend ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/../frontend ${FRONTEND_DEST_DIR}/frontend
+  COMMENT "Deploying frontend...")

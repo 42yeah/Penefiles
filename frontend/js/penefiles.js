@@ -1,4 +1,4 @@
-import { API, FRONTEND } from "./config.js";
+import { API, FRONTEND, FIRST_TIME } from "./config.js";
 
 // 
 // The Penefiles state machine.
@@ -38,6 +38,13 @@ export class Penefiles {
         this.infoPaneHandleEl = document.querySelector(".info-pane-handle");
         this.acTagsList = [];
         this.headless = headless;
+
+        // First time variables
+        this.frontendPathEl = null;
+        this.domainNameEl = null;
+        this.nginxCM = null;
+        this.frontendCM = null;
+        this.setupResultEl = null;
     
         if (!headless) {
             this.fileListEl.onscroll = (e) => {
@@ -1322,17 +1329,6 @@ export class Penefiles {
         });
     }
 
-    testMakeCode() {
-        fetch(`${API}/codes/make`, {
-            method: "GET"
-        }).then(res => {
-            return res.json();
-        }).then(json => {
-            console.log(json);
-            this.testInputEl.value = json.code;
-        });
-    }
-
     testLogin() {
         fetch(`${API}/users/login`, {
             method: "POST",
@@ -1486,6 +1482,92 @@ export class Penefiles {
     neutral() {
         this.setInfoPaneContent(neutralPage);
         this.dumpVariables();
+    }
+
+    generateCode() {
+        fetch(`${API}/codes/make`, {
+            method: "POST",
+            body: JSON.stringify({
+                session: this.session
+            })
+        }).then(res => {
+            return res.json();
+        }).then(json => {
+            document.querySelector("#generated-code").value = json.code;
+        }).catch(e => {
+            this.message("Code generation failed", `Can't generate invitation code: ${e.toString()}`)
+        });
+    }
+
+    wizard() {
+        // Wizard is run if it's the first time to guide users through some
+        // initial mandatory setups.
+        this.setInfoPaneContent(wizardPage);
+        this.dumpVariables();
+
+        this.nginxCM = createCodeMirror(document.querySelector("#nginx-conf"));
+        this.frontendCM = createCodeMirror(document.querySelector("#frontend-conf"));
+        this.frontendPathEl = document.querySelector("#frontend-path");
+        this.domainNameEl = document.querySelector("#domain");
+        this.setupResultEl = document.querySelector(".setup-results");
+    }
+
+    refreshConfs() {
+        const fpath = this.frontendPathEl.value;
+        const domain = this.domainNameEl.value;
+
+        if (fpath != "" && domain != "") {
+            this.setupResultEl.classList.remove("hidden");
+        } else {
+            this.setupResultEl.classList.add("hidden");
+            return;
+        }
+
+        const nginxTemp = `server {
+    listen 80;
+    listen [::]:80;
+    server_name ${domain};
+    client_max_body_size 1024M;
+
+    location / {
+        root ${fpath};
+        index index.html index.htm;
+    }
+
+    location /api {
+        rewrite /api(.*) /$1 break;
+        proxy_pass 127.0.0.1:4243;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 15;
+        proxy_connect_timeout 15;
+        proxy_send_timeout 15;
+    }
+}
+`;
+
+        const confTemp = `export const API = "http://${domain}/api";
+export const FRONTEND = "http://${domain}";
+export const FIRST_TIME = false;
+`;
+        let transaction = this.nginxCM.state.update({
+            changes: {
+                from: 0,
+                to: this.nginxCM.state.doc.length,
+                insert: nginxTemp
+            }
+        });
+        this.nginxCM.update([transaction]);
+
+        transaction = this.frontendCM.state.update({
+            changes: {
+                from: 0,
+                to: this.frontendCM.state.doc.length,
+                insert: confTemp
+            }
+        });
+        this.frontendCM.update([transaction]);
     }
 
     fileInfo(id, event) {
@@ -1700,6 +1782,16 @@ export class Penefiles {
         this.doQuickSearch();
         this.dumpVariables();
     }
+
+    showNginxGuide() {
+        document.querySelector("#non-nginx-warning").classList.add("hidden");
+        document.querySelector("#nginx-collapser").classList.remove("hidden");
+    }
+
+    showNonNginxGuide() {
+        document.querySelector("#non-nginx-warning").classList.remove("hidden");
+        document.querySelector("#nginx-collapser").classList.add("hidden");
+    }
 }
 
 const loginPage = `
@@ -1841,6 +1933,72 @@ const neutralPage = `
     <h1 class="gray">Welcome to PENEfiles.</h1>
 </div>`;
 
+const wizardPage = `
+<div class="info-pane-table-container big-screen-h-center flex-1">
+    <div class="markdown-preview">
+        <h2 class="file-name-title">Welcome to PENEfiles!</h2>
+        <p>
+            Hello, and welcome to PENEfiles. You have successfully got the thing up & running, (well, at least the frontend part). Some additional configs are required for a your personal fully functional tag-based file management system, though. Answer the following questions so that we can get it set up together.
+        </p>
+
+        <div class="info-pane-pairs">
+            <div class="info-pane-label">What are you using?</div>
+            <div class="info-pane-checkbox">
+                <label for="nginx" class="radio-option controls" onclick="session.showNginxGuide()">
+                    <input class="controls" type="radio" id="nginx" name="nginx">
+                    <span>NGINX</span>
+                </label>
+            </div>
+            <label for="not-nginx" class="radio-option controls" onclick="session.showNonNginxGuide()">
+                <input class="controls" type="radio" id="not-nginx" name="nginx">
+                <span>Not NGINX</span>
+            </label>
+        </div>
+
+        <div class="info-pane-operations hidden" id="non-nginx-warning">
+            <p>
+                Since I didn't work with other web servers before, I can't really help you; however, the core concepts are the same, so here's what you need to do:
+            </p>
+            <ul>
+                <li>Setup a virtual host and point / to where the frontend is.</li>
+                <li>Setup a reverse proxy at /api to localhost:4243.</li>
+                <li>Update <code>frontend/js/config.js</code> and set the <code>API</code> url accordingly.</li>
+            </ul>
+        </div>
+
+        <div id="nginx-collapser" class="hidden">
+            <div class="info-pane-pairs">
+                <div class="info-pane-label">Where is the frontend?</div>
+                <div class="info-pane-input">
+                    <input id="frontend-path" class="controls info-pane-tags-input" value="" name="frontend-path" onkeyup="session.refreshConfs()">
+                </div>
+            </div>
+            <p class="input-hint">Please specify the <strong>parent directory</strong> of PENEfile's index.html.</p>
+            <div class="info-pane-pairs">
+                <div class="info-pane-label">Server domain name?</div>
+                <div class="info-pane-input">
+                    <input id="domain" class="controls info-pane-tags-input" value="" name="domain" onkeyup="session.refreshConfs()">
+                </div>
+            </div>
+            <p class="input-hint">Doesn't have to be a proper domain name - it can be an IP as well, e.g. 10.0.0.1.</p>
+            <div class="setup-results hidden">
+                <p>
+                    Here's your NGINX config. Add it to your config files in <code>/etc/nginx/conf.d</code> or whatever.
+                </p>
+                <div class="guide-code notes-area-container input-hint" id="nginx-conf">
+                </div>
+                <p>
+                    Here's the frontend config file. Replace the innards of <code>frontend/js/config.js</code> with the following.
+                </p>
+                <div class="guide-code notes-area-container input-hint" id="frontend-conf">
+                </div>
+                <p>After you put those into place, go and visit the new frontend path.</p>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+
 function getUserInfo() {
     return `
     <h2 class="file-name-title">User: ${session.username}</h2>
@@ -1872,6 +2030,24 @@ function getUserInfo() {
                     <div>Save</div>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="info-pane-operations-container">
+        <div class="info-pane-operations">
+            <p class="padding-top-5px gray">You can invite your friends to your instance by giving them an invitation code. The code will expire after ONE (1) use.</p>
+            <div class="info-pane-pairs">
+                <div class="info-pane-label">Generate invitation code</div>
+                <div class="info-pane-input">
+                    <input id="generated-code" placeholder="Generated code" class="controls info-pane-tags-input" value="">
+                </div>
+            </div>
+            <div class="padding-top-5px">
+                <div class="control-button with-icon controls inline-control-button" onclick="session.generateCode()">
+                    <img class="icon-controls" src="assets/asterisk_yellow.svg">
+                    <div>Generate</div>
+                </div>
+            </div>
+
         </div>
     </div>
     `;

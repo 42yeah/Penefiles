@@ -29,3 +29,6 @@ endif()
 
 target_include_directories(penefiles PUBLIC 
   ${PROJECT_SOURCE_DIR}/include)
+
+set_target_properties(penefiles PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "../")
