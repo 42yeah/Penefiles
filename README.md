@@ -26,11 +26,29 @@ ninja
 
 Everything should now be in the `build` directory. A full PENEfiles instance should contain:
 
-- `frontend` directory with the frontend;
-- `sql` directory, which stores the file data;
-- `uploads` directory which stores uploaded files.
+- a `frontend` directory with all the frontend stuffs inside;
+- an `sql` directory, which stores the file data;
+- an `uploads` directory which stores uploaded files.
 
 Run `./penefiles` to start the unboxing run. You will be prompted a few things - this is needed to figure out a configure for you, as PENEfiles requires NGINX (or other webservers) to work. Just follow the instructions. Good luck and have fun! (Also, don't accidentally `ninja` again since that will definitely wipe your db.)
+
+## Custom Installation
+
+Say you want to do things yourself. That's totally fine, but you need to make sure that:
+
+- The `frontend` directory is accessible from the web server;
+- The `frontend/js/config.js` is properly configured and points to the backend (or the reverse proxied backend);
+
+And that's it. If you want to directly expose the backend server to the wide world of web, that's cool as well, though it's not advised. To force that, change the listen address in AppComponent:17 from `127.0.0.1` to `0.0.0.0` and allow port 4243 in your firewall.
+
+```bash
+# Example ubuntu config 
+sudo ufw allow 4243
+
+# Or, firewalld users - 
+sudo firewall-cmd --permanent --add-port 4243/tcp
+sudo firewall-cmd --reload
+```
 
 ## Auto Tagging
 
