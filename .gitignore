@@ -3,3 +3,4 @@ backend/build
 build
 intermediate/node_modules
 backend/.cache
+**/.DS_Store

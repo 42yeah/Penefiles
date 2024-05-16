@@ -123,7 +123,7 @@ oatpp::Object<CodeDto> PenefilesService::make_code(const oatpp::Object<Authentic
     const std::lock_guard<std::mutex> guardian(mu);
 
     auto user = select_user_by_session(dto->session);
-    std::cout << "User found somehow." << user->username->c_str() << std::endl;
+    OATPP_ASSERT_HTTP(user, Status::CODE_500, "Not logged in.");
 
     std::string code = generate_random_string();
     auto res = database->make_code(code);
