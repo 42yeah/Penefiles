@@ -13,19 +13,19 @@ window.session.doRefresh().then(() => {
     const url = new URL(window.location.href);
     const id = url.searchParams.get("id");
     if (!id) {
-        containerEl.innerHTML = `你需要提供笔记 ID。`;
+        containerEl.innerHTML = `You need to provide a note ID.`;
         return;
     }
     const f = sql(session.queries.findFileById, { ":id": +id }, true);
     if (f.length == 0) {
-        containerEl.innerHTML = `找不到该笔记。`;
+        containerEl.innerHTML = `Cannot locate note.`;
         return;
     }
     const tags = sql(session.queries.findTagsOfFile, { ":id": +id }, false);
     if (!tags.find(pred => {
         return pred.tag == "Note"
     })) {
-        containerEl.innerHTML = `这个文件不是笔记。`;
+        containerEl.innerHTML = `That's not a note.`;
         return;
     }
 

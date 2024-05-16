@@ -15,35 +15,35 @@
             <div class="top-operations">
                 <div onclick="session.doRefresh()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/lightning.svg">
-                    <div>刷新</div>
+                    <div>Refresh</div>
                 </div>
                 <div onclick="session.toggleSortByDate()" class="inactive control-button controls with-icon">
                     <img class="icon-controls" src="assets/date.svg">
-                    <div id="sort-by-date">无日期排序</div>
+                    <div id="sort-by-date">No date sort</div>
                 </div>
                 <div onclick="session.toggleSortByName()" class="inactive control-button controls with-icon">
                     <img class="icon-controls" src="assets/textfield_rename.svg">
-                    <div id="sort-by-name">无文件名排序</div>
+                    <div id="sort-by-name">No name sort</div>
                 </div>
                 <div onclick="session.toggleOnlyShowMine()" class="inactive control-button controls with-icon">
                     <img class="icon-controls" src="assets/status_online.svg">
-                    <div id="only-show-mine">只显示我的</div>
+                    <div id="only-show-mine">Only mine</div>
                 </div>
                 <div id="register-top-control" onclick="session.register()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/asterisk_yellow.svg">
-                    <div>注册</div>
+                    <div>Register</div>
                 </div>
                 <div id="login-top-control" onclick="session.login()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/key.svg">
-                    <div>登陆</div>
+                    <div>Login</div>
                 </div>
                 <div onclick="session.tests()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/bug_go.svg">
-                    <div>调试</div>
+                    <div>Debug</div>
                 </div>
                 <div id="info-top-control" onclick="session.personalInfo()" class="control-button controls with-icon">
                     <img class="icon-controls" src="assets/house.svg">
-                    <div>用户信息</div>
+                    <div>User info</div>
                 </div>
             </div>
         </div>
@@ -52,12 +52,12 @@
                 <div ondragleave="return window.dragEndHandler(event)" ondragover="return window.dragOverHandler(event)" ondrop="return session.doDrop(event)" class="file-list">
                 </div>
                 <div class="hidden completion-window">
-                    <h5>标签列表</h5>
+                    <h5>Tag list</h5>
                     <div class="ac-tags ac-tags-list">
                     </div>
                 </div>
                 <div class="bottom-bar">
-                    <input id="quick-search" autocomplete="off" onkeyup="session.doQuickSearch()" class="search-input controls" placeholder="按 / 快速访问。">
+                    <input id="quick-search" autocomplete="off" onkeyup="session.doQuickSearch()" class="search-input controls" placeholder="Press / for quick access.">
                     <div class="quick-operations">
                         <div onclick="session.doCreateNote()" class="quick-notes controls">
                             <img src="assets/page_white_edit.svg" class="icon-controls">
@@ -72,7 +72,7 @@
             <div class="info-pane-container">
                 <div class="info-pane">
                     <div class="container-center">
-                        <h1 class="gray">欢迎使用 PENEfiles。</h1>
+                        <h1 class="gray">Welcome to PENEfiles.</h1>
                     </div>
                 </div>
                 <div class="info-pane-handle controls">⋯</div>
@@ -84,7 +84,7 @@
 
         </div>
         <div class="hidden superposition-file-queue-window">
-            <h3>上传队列</h3>
+            <h3>Uploaded queue</h3>
             <div class="padding-top-5px"></div>
             <div class="padding-top-5px"></div>
             <div class="progress-bar">
@@ -94,15 +94,15 @@
             <div class="file-operations">
                 <div onclick="session.doAbortUpload()" class="control-button controls with-icon">
                     <img src="assets/cancel.svg" class="icon-controls">
-                    <div>终止</div>
+                    <div>Terminate</div>
                 </div>
                 <div onclick="session.doGlobalAbortUpload()" class="control-button controls with-icon">
                     <img src="assets/cancel.svg" class="icon-controls">
-                    <div>清除队列</div>
+                    <div>Clear queue</div>
                 </div>
                 <div onclick="session.hideUploads()" class="control-button controls with-icon">
                     <img src="assets/application_delete.svg" class="icon-controls">
-                    <div>隐藏</div>
+                    <div>Hide</div>
                 </div>
             </div>
             <div class="padding-top-5px"></div>

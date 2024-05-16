@@ -1,4 +1,5 @@
 #include "services/PenefilesService.hpp"
+#include <filesystem>
 #include <random>
 #include <sstream>
 #include <iostream>
@@ -9,9 +10,22 @@
 #include <oatpp/web/mime/multipart/PartList.hpp>
 #include "filesystem.hpp"
 
+// OS-agnostic password input, from: https://stackoverflow.com/questions/1413445/reading-a-password-from-stdcin
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
+
+
 PenefilesService::PenefilesService() : running(true)
 {
     orphan_watcher_thread = std::make_unique<std::thread>(&PenefilesService::delete_orphans_watcher, this);
+    if (!unboxing())
+    {
+        OATPP_LOGE("PENEfiles", "Unboxing has failed. PENEfiles may or may not not be working correctly.");
+    }
 }
 
 PenefilesService::~PenefilesService()
@@ -104,9 +118,12 @@ oatpp::Object<ResponseDto> PenefilesService::login(const oatpp::Object<UserDto> 
     return res;
 }
 
-oatpp::Object<CodeDto> PenefilesService::make_code()
+oatpp::Object<CodeDto> PenefilesService::make_code(const oatpp::Object<AuthenticationDto> &dto)
 {
     const std::lock_guard<std::mutex> guardian(mu);
+
+    auto user = select_user_by_session(dto->session);
+    OATPP_ASSERT_HTTP(user, Status::CODE_500, "Not logged in.");
 
     std::string code = generate_random_string();
     auto res = database->make_code(code);
@@ -693,4 +710,200 @@ int PenefilesService::delete_orphans()
         }
     }
     return orphans_removed;
+}
+
+void PenefilesService::set_stdin_echo(bool enabled)
+{
+#ifdef WIN32
+    HANDLE hstdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hstdin, &mode);
+    if(!enabled)
+        mode &= ~ENABLE_ECHO_INPUT;
+    else
+        mode |= ENABLE_ECHO_INPUT;
+    SetConsoleMode(hStdin, mode );
+#else
+    termios tty;
+    tcgetattr(STDIN_FILENO, &tty);
+    if (!enabled)
+    {
+        tty.c_lflag &= ~ECHO;
+    }
+    else
+    {
+        tty.c_lflag |= ECHO;
+    }
+    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+#endif
+}
+
+
+bool PenefilesService::unboxing()
+{
+    auto res = database->get_all_users();
+    OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+
+    auto users = res->fetch<oatpp::Vector<oatpp::Object<UserDto> > >();
+    if (!users->empty())
+    {
+        return true;
+    }
+
+    std::cout << "Hello and welcome to PENEfiles. Some additional configs are required for a your personal fully functional tag-based file management system. Answer the following questions so that we can get it set up together." << std::endl;
+    std::cout << "Are you using NGINX? (y/n) ";
+    std::string response;
+    std::getline(std::cin, response);
+
+    if (response != "y")
+    {
+        std::cout << "Since I didn't work with other web servers before, I can't really help you; however, the core concepts are the same, so here's what you need to do:" << std::endl
+                  << "  - Setup a virtual host and point `/` to where the frontend is." << std::endl
+                  << "  - Setup a reverse proxy at `/api` to localhost:4243." << std::endl
+                  << "  - Update `frontend/js/config.js` and set the `API` url accordingly." << std::endl;
+    }
+    else
+    {
+        fs::path this_path("frontend");
+        std::string frontend = fs::absolute(this_path);
+        std::cout << "Where is the frontend? (" << frontend << ")" << std::endl;
+        std::getline(std::cin, response);
+        if (!response.empty())
+        {
+            frontend = response;
+        }
+        std::cout << "Server domain name? Doesn't have to be a proper domain name. IP works as well. (localhost)" << std::endl;
+        std::string domain = "localhost";
+        std::getline(std::cin, response);
+        if (!response.empty())
+        {
+            domain = response;
+        }
+
+        constexpr char nginx_temp[8192] = R"nginx(server {
+    listen 80;
+    listen [::]:80;
+    server_name %s;
+    client_max_body_size 1024M;
+
+    location / {
+        root %s;
+        index index.html index.htm;
+    }
+
+    location /api {
+        rewrite /api(.*) /$1 break;
+        proxy_pass 127.0.0.1:4243;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 15;
+        proxy_connect_timeout 15;
+        proxy_send_timeout 15;
+    }
+})nginx";
+
+        constexpr char conf_temp[8192] = R"js(export const API = "http://%s/api";
+export const FRONTEND = "http://%s";
+export const FIRST_TIME = false;)js";
+        char nginx[8192] = { 0 }, conf[8192] = { 0 };
+        snprintf(nginx, sizeof(nginx), nginx_temp, domain.c_str(), frontend.c_str());
+        snprintf(conf, sizeof(conf), conf_temp, domain.c_str(), domain.c_str());
+
+        std::cout << "OK. Here's your NGINX config. Add it to your config files in `/etc/nginx/conf.d` or whatever." << std::endl;
+        std::cout << "--" << std::endl;
+        std::cout << nginx << std::endl;
+        std::cout << "--" << std::endl;
+        std::cout << "Press enter to continue..." << std::endl;
+        std::getline(std::cin, response);
+
+        std::cout << "Here's the frontend config. Replace the innards of `frontend/js/config.js` with the following code." << std::endl;
+        std::cout << "--" << std::endl;
+        std::cout << conf << std::endl;
+        std::cout << "--" << std::endl;
+
+        std::cout << "Do you want me do that for you? (y/n) " << std::endl;
+        std::getline(std::cin, response);
+        if (response == "y")
+        {
+            char frontend_path[1024] = { 0 };
+            snprintf(frontend_path, sizeof(frontend_path), "%s/js/config.js", frontend.c_str());
+
+            {
+                std::ofstream writer(frontend_path);
+                if (!writer.good())
+                {
+                    std::cerr << "Cannot overwrite content in config.js. You might have to do it yourself." << std::endl;
+                }
+                else
+                {
+                    writer << conf;
+                }
+            }
+            std::cout << "Done and done." << std::endl;
+        }
+    }
+
+    std::cout << "Is everything setup? (y/n) ";
+    std::getline(std::cin, response);
+    if (response != "y")
+    {
+        std::cout << "Please set them up first." << std::endl;
+        return false;
+    }
+
+    std::cout << "Time has come to create the first account. PENEfiles works on an invitation code basis, so the first one has to be created in this dingy TTY, because I am too lazy to make a specified UI frontend just for the first one. I do apologize." << std::endl;
+    response = "";
+    while (response.empty())
+    {
+        std::cout << "Username: ";
+        std::getline(std::cin, response);
+        if (response.empty())
+        {
+            std::cout << "Username cannot be empty." << std::endl;
+        }
+    }
+    std::string username = response;
+    std::string password = "";
+    set_stdin_echo(false);
+    while (true)
+    {
+        password = "";
+        response = "";
+        while (response.empty())
+        {
+            std::cout << "Password: ";
+            std::getline(std::cin, response);
+            std::cout << std::endl;
+            if (response.empty())
+            {
+                std::cout << "Password cannot be empty." << std::endl;
+            }
+        }
+        password = response;
+        response = "";
+        std::cout << "Confirm: ";
+        std::getline(std::cin, response);
+        std::cout << std::endl;
+        if (response.empty() || response != password)
+        {
+            std::cout << "Confirmation failed." << std::endl;
+        }
+        else
+        {
+            break;
+        }
+    }
+    set_stdin_echo(true);
+
+    auto result = database->create_user(username, password);
+    if (!result->isSuccess())
+    {
+        std::cerr << "Error: failed to create account. Is the database located in ./sql/penefiles.sqlite3?" << std::endl;
+        std::cout << "       after making sure, run `penefiles` again." << std::endl;
+        return false;
+    }
+    std::cout << "Setup done. PENEfiles is officially starting..." << std::endl;
+
+    return true;
 }

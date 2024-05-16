@@ -469,7 +469,7 @@ html {
     border-radius: 2px;
     padding: 5px;
     display: inline-grid;
-    grid-template-columns: 100px auto;
+    grid-template-columns: 150px auto;
 }
 
 .info-pane-checkbox {
@@ -756,6 +756,15 @@ mjx-container {
 
 .crossref-label {
     padding-left: 5px;
+}
+
+.input-hint {
+    padding-bottom: 10px;
+}
+
+.guide-code .cm-editor {
+    min-height: 300px;
+    max-height: 300px;
 }
 
 @media screen and (max-width: 645px) {

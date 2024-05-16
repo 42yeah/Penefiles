@@ -1,2 +1,11 @@
 add_library(uuid uuid/uuid.cpp)
 target_include_directories(uuid PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/uuid)
+
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+if (NOT USE_EXISTING_OATPP)
+  set(OATPP_DIR_SRC ${PROJECT_SOURCE_DIR}/deps/oatpp)
+  set(OATPP_BUILD_TESTS OFF)
+  set(OATPP_MODULES_LOCATION "CUSTOM" CACHE STRING "Override Oat++ location.")
+  add_subdirectory(${OATPP_DIR_SRC})
+  add_subdirectory(${PROJECT_SOURCE_DIR}/deps/oatpp-sqlite)
+endif()
