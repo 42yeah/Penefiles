@@ -22,7 +22,7 @@
 PenefilesService::PenefilesService() : running(true)
 {
     orphan_watcher_thread = std::make_unique<std::thread>(&PenefilesService::delete_orphans_watcher, this);
-    if (!unboxing())
+    if (!unbox())
     {
         OATPP_LOGE("PENEfiles", "Unboxing has failed. PENEfiles may or may not not be working correctly.");
     }
@@ -739,7 +739,7 @@ void PenefilesService::set_stdin_echo(bool enabled)
 }
 
 
-bool PenefilesService::unboxing()
+bool PenefilesService::unbox()
 {
     auto res = database->get_all_users();
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
@@ -793,7 +793,7 @@ bool PenefilesService::unboxing()
 
     location /api {
         rewrite /api(.*) /$1 break;
-        proxy_pass 127.0.0.1:4243;
+        proxy_pass http://127.0.0.1:4243;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Connection "upgrade";

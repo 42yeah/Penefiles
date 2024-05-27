@@ -67,10 +67,10 @@ public:
     void set_stdin_echo(bool enabled);
     
     /**
-       unboxing() initiates some guides for first-time runners.
+       unbox() initiates some guides for first-time runners.
        We give advice on NGINX configs, frontend configs, and more.
     */
-    bool unboxing();
+    bool unbox();
 
 private:
     int delete_orphans();
