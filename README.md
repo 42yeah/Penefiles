@@ -1,8 +1,14 @@
-## Penefiles 
+## PENEfiles 
 
 > Warning: [name subject to change](https://www.reddit.com/r/selfhosted/comments/1cf57ln/comment/l1ndezs/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button).
 
-Penefiles is split into two parts, frontend and backend. Frontend is written in vanilla JavaScript, and hopefully is very fast; while backend is written in C++ Oat++.
+Penefiles (Stylized: PENEfiles) is a tag-based file & note management system. Store your notes and files here and access them at any time.
+
+![PENEfiles introductory image](https://blog.42yeah.is/assets/post_assets/penefiles/penefiles_intro.png)
+
+There are no folders in PENEfiles; only tags. Assign one or more tag(s) to each file, and fully exploit the in-system lightning-fast search to locate your files. [Read about why PENEfiles is designed this way](https://blog.42yeah.is/featured/2023/05/06/introducing-penefiles.html).
+
+Penefiles is split into two parts, frontend and backend. Frontend is written in vanilla JavaScript, and hopefully is very fast; while backend is written in C++, and powered by [Oat++](https://github.com/oatpp/oatpp).
 
 ## Getting Started
 
