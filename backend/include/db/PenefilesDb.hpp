@@ -6,6 +6,7 @@
 #include <oatpp/core/macro/codegen.hpp>
 #include <oatpp-sqlite/orm.hpp>
 #include "dto/DTOs.hpp"
+#include "oatpp/core/Types.hpp"
 
 #include OATPP_CODEGEN_BEGIN(DbClient) ///< Begin code-gen section
 
@@ -120,6 +121,10 @@ public:
 
     QUERY(find_tags_of_file, 
           "SELECT * FROM files_tags WHERE fileid=:id;",
+          PARAM(oatpp::Int32, id));
+
+    QUERY(is_file_orphaned,
+          "SELECT username FROM users WHERE username IN (SELECT tag FROM files_tags WHERE fileid=:id)",
           PARAM(oatpp::Int32, id));
 };
 

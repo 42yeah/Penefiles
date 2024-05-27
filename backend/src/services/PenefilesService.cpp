@@ -333,7 +333,7 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
         OATPP_LOGI("PENEfiles", "No one owns %s. Therefore, no one can update it.", file->realfile->c_str());
         should_update = false;
     }
-    else 
+    else
     {
         // Check for user tag. If I own it, I can update it.
         auto tags = res->fetch<oatpp::Vector<oatpp::Object<FileTagDto> > >();
@@ -353,7 +353,6 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
     OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
 
     std::vector<std::string> tags_to_add;
-
     for (int i = 0; i < dto->tags->size(); i++)
     {
         std::string tag = dto->tags[i];
@@ -366,7 +365,7 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
         file_tags.erase(pos, pos + 1);
     }
 
-    // 
+    //
     // At the end of the day,
     // Tags inside file_tags are to be removed;
     // Tags in tags_to_add are to be added.
@@ -379,6 +378,14 @@ oatpp::Object<ResponseDto> PenefilesService::update_file(const oatpp::Object<Aut
     for (const auto &t : tags_to_add)
     {
         res = database->bind_tag_to_file(file->id, t);
+        OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, "Cannot bind tag to file.");
+    }
+
+    res = database->is_file_orphaned(file->id);
+    OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, res->getErrorMessage());
+    if (!res->hasMoreToFetch())
+    {
+        res = database->bind_tag_to_file(file->id, user->username);
         OATPP_ASSERT_HTTP(res->isSuccess(), Status::CODE_500, "Cannot bind tag to file.");
     }
 
